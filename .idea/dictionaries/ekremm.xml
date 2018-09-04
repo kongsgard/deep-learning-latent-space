@@ -2,6 +2,9 @@
   <dictionary name="ekremm">
     <words>
       <w>cuda</w>
+      <w>mnist</w>
+      <w>nvcc</w>
+      <w>nvidia</w>
     </words>
   </dictionary>
 </component>

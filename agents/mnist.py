@@ -31,31 +31,32 @@ class MnistAgent(BaseAgent):
     def __init__(self, config):
         super().__init__(config)
 
-        # define models
+        # Define models
         self.model = Mnist()
 
-        # define data_loader
+        # Define data_loader
         self.data_loader = MnistDataLoader(config=config)
 
-        # define loss
+        # Define loss
         self.loss = nn.NLLLoss()
 
-        # define optimizer
+        # Define optimizer
         self.optimizer = optim.SGD(self.model.parameters(), lr=self.config.learning_rate, momentum=self.config.momentum)
 
-        # initialize counter
+        # Initialize counter
         self.current_epoch = 0
         self.current_iteration = 0
         self.best_metric = 0
 
-        # set cuda flag
+        # Set cuda flag
         self.is_cuda = torch.cuda.is_available()
+        print(self.is_cuda) # TODO: Remove
         if self.is_cuda and not self.config.cuda:
             self.logger.info("WARNING: You have a CUDA device, so you should probably enable CUDA")
 
         self.cuda = self.is_cuda & self.config.cuda
 
-        # set the manual seed for torch
+        # Set the manual seed for torch
         self.manual_seed = self.config.seed
         if self.cuda:
             torch.cuda.manual_seed(self.manual_seed)
@@ -73,6 +74,7 @@ class MnistAgent(BaseAgent):
 
         # Model Loading from the latest checkpoint if not found start from scratch.
         self.load_checkpoint(self.config.checkpoint_file)
+
         # Summary Writer
         self.summary_writer = None
 
@@ -114,6 +116,7 @@ class MnistAgent(BaseAgent):
             self.validate()
 
             self.current_epoch += 1
+
     def train_one_epoch(self):
         """
         One epoch of training
@@ -154,6 +157,7 @@ class MnistAgent(BaseAgent):
         self.logger.info('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
             test_loss, correct, len(self.data_loader.test_loader.dataset),
             100. * correct / len(self.data_loader.test_loader.dataset)))
+
     def finalize(self):
         """
         Finalizes all the operations of the 2 Main classes of the process, the operator and the data loader
