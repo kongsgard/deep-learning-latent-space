@@ -25,7 +25,7 @@
   "beta1": 0.5,
   "beta2": 0.999,
 
-  "max_epoch": 20,
+  "max_epoch": 1,
 
   "validate_every": 2,
 
@@ -37,7 +37,7 @@
   "async_loading": true,
 
   "data_mode": "imgs",
-  "data_folder": "./data/",
+  "data_folder": "./data/celeba",
 
   "x_train": "",
   "y_train": "",
