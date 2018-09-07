@@ -26,7 +26,7 @@ def plot_voxels_in_visdom(voxels, visdom, title):
 
 
 def main():
-    with open('data/ShapeNetChair/chair/train/chair_000002307_4.mat', "rb") as f:
+    with open('../data/ShapeNetChair/chair/train/chair_000002307_4.mat', "rb") as f:
         voxels = np.asarray(get_voxels_from_mat(f, 64), dtype=np.float32)
         vis = visdom.Visdom()
         plot_voxels_in_visdom(voxels, vis, 'chair')
