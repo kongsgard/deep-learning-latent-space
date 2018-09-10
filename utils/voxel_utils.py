@@ -19,10 +19,10 @@ def get_vertices_and_faces_by_marching_cubes(voxels, threshold=0.5):
     return v, f
 
 
-def plot_voxels_in_visdom(voxels, visdom, title):
-    """Visdom voxel plot - fast"""
+def plot_voxels_in_visdom(voxels, vis, plot_title="shape", window_title="shape"):
+    """Visdom voxel plot"""
     v, f = get_vertices_and_faces_by_marching_cubes(voxels)
-    visdom.mesh(X=v, Y=f, opts=dict(opacity=0.5, title=title), win='chair')
+    vis.mesh(X=v, Y=f, opts=dict(opacity=0.5, title=plot_title), win=window_title)
 
 
 def main():
