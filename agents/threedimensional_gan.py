@@ -5,6 +5,7 @@ import visdom
 
 from agents.base import BaseAgent
 from datasets.shapenet import ShapeNetDataLoader
+from utils.metrics import AverageMeter
 from utils.misc import print_cuda_statistics
 from utils.voxel_utils import plot_voxels_in_visdom
 
@@ -62,13 +63,28 @@ class ThreeDimensionalGANAgent(BaseAgent):
         tqdm_batch = tqdm(self.dataloader.loader, total=self.dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
 
+        g_epoch_loss = AverageMeter()
+        d_epoch_loss = AverageMeter()
+
         vis = visdom.Visdom()  # TODO: Move
         for curr_it, x in enumerate(tqdm_batch):
             if curr_it == 0:  # Todo: Refactor
                 plot_voxels_in_visdom(torch.Tensor.numpy(x[0]), vis)
 
+        g_epoch_loss.update(100)  # TODO: Fix
+        d_epoch_loss.update(100)  # TODO: Fix
+
+        tqdm_batch.close()
+
+        self.logger.info("Training at epoch-" + str(self.current_epoch) + " | " + "Generator loss: " + str(
+            g_epoch_loss.val) + " - Discriminator loss: " + str(d_epoch_loss.val))
+
     def validate(self):
         pass
 
     def finalize(self):
-        pass
+        self.logger.info("Agent has finished running - wait to finalize...")
+        self.save_checkpoint()
+        self.summary_writer.export_scalars_to_json("{}all_scalars.json".format(self.config.summary_dir))
+        self.summary_writer.close()
+        self.dataloader.finalize()
