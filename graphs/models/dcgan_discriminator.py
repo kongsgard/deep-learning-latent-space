@@ -67,7 +67,7 @@ def main():
     print (inp.shape)
     netD = Discriminator(config)
     out = netD(inp)
-    print (out)
+    print (out.shape)
 
 if __name__ == '__main__':
     main()

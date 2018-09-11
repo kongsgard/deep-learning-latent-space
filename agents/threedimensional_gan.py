@@ -1,21 +1,32 @@
 from tqdm import tqdm
 
+from tensorboardX import SummaryWriter
 import torch
 import visdom
 
 from agents.base import BaseAgent
+from graphs.losses.bce import BinaryCrossEntropy
+from graphs.models.threed_gan_generator import Generator
+from graphs.models.threed_gan_discriminator import Discriminator
 from datasets.shapenet import ShapeNetDataLoader
 from utils.metrics import AverageMeter
 from utils.misc import print_cuda_statistics
-from utils.voxel_utils import plot_voxels_in_visdom
+from utils.voxel_utils import generate_fake_noise, plot_voxels_in_visdom
 
 
 class ThreeDimensionalGANAgent(BaseAgent):
     def __init__(self, config):
         super().__init__(config)
 
+        # Define models (generator and discriminator)
+        self.g_net = Generator(self.config)
+        self.d_net = Discriminator(self.config)
+
         # Define dataloader
         self.dataloader = ShapeNetDataLoader(self.config)
+
+        # Define loss
+        self.loss = BinaryCrossEntropy()
 
         # Initialize counter
         self.current_epoch = 0
@@ -39,6 +50,13 @@ class ThreeDimensionalGANAgent(BaseAgent):
             torch.manual_seed(self.config.seed)
             self.logger.info("Program will run on ***CPU***")
 
+        self.g_net = self.g_net.to(self.device)
+        self.d_net = self.d_net.to(self.device)
+        self.loss = self.loss.to(self.device)
+
+        # Summary Writer
+        self.summary_writer = SummaryWriter(log_dir=self.config.summary_dir, comment='3DGAN')
+
     def load_checkpoint(self, file_name):
         pass
 
@@ -58,6 +76,8 @@ class ThreeDimensionalGANAgent(BaseAgent):
             self.train_one_epoch()
             self.save_checkpoint()
 
+            break  # TODO: Remove
+
     def train_one_epoch(self):
         # Initialize tqdm batch
         tqdm_batch = tqdm(self.dataloader.loader, total=self.dataloader.num_iterations,
@@ -68,8 +88,34 @@ class ThreeDimensionalGANAgent(BaseAgent):
 
         vis = visdom.Visdom()  # TODO: Move
         for curr_it, x in enumerate(tqdm_batch):
+
+
+            z = generate_fake_noise(self.config)
+            real_labels = torch.ones(self.config.batch_size).view(-1, 1, 1, 1, 1)
+            fake_labels = torch.zeros(self.config.batch_size).view(-1, 1, 1, 1, 1)
+
+            if self.cuda:
+                x = x.cuda(async=self.config.async_loading)
+                z = z.cuda(async=self.config.async_loading)
+                real_labels = real_labels.cuda(async=self.config.async_loading)
+                fake_labels = fake_labels.cuda(async=self.config.async_loading)
+
+            # === Train the discriminator ===
+            # Train with real data
+            self.d_net.zero_grad()
+            d_real_out = self.d_net(x)
+            d_real_loss = self.loss(d_real_out, real_labels)
+
+            # Train with fake data
+            g_fake_out = self.g_net(z)
+            d_fake_out = self.d_net(g_fake_out.detach())
+            d_fake_loss = self.loss(d_fake_out, fake_labels)
+
             if curr_it == 0:  # Todo: Refactor
-                plot_voxels_in_visdom(torch.Tensor.numpy(x[0]), vis)
+                plot_voxels_in_visdom(torch.Tensor.numpy(x.cpu()[0]), vis, "shape", "true")
+                plot_voxels_in_visdom(torch.Tensor.numpy(g_fake_out.detach().cpu()[0][0]), vis, "shape", "fake")
+
+            break  # TODO: Remove
 
         g_epoch_loss.update(100)  # TODO: Fix
         d_epoch_loss.update(100)  # TODO: Fix

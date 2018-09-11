@@ -16,8 +16,9 @@
   "beta2": 0.5,
   "d_threshold": 0.8,
   "z_size": 200,
-  "z_distribution": "norm",
+  "z_distribution": "normal",
   "bias": false,
+  "leak_value": 0.2,
 
   "object": "chair",
 
