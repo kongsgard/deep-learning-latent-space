@@ -1,13 +1,3 @@
-"""
-__author__ = "Hager Rady and Mo'men AbdelRazek"
-
-Main
--Capture the config file
--Process the json config passed
--Create an agent instance
--Run the agent
-"""
-
 import argparse
 from utils.config import *
 
@@ -27,7 +17,7 @@ def main():
     # parse the config json file
     config = process_config(args.config)
 
-    # Create the Agent and pass all the configuration to it then run it..
+    # Create the Agent and pass all the configuration for then to run it
     agent_class = globals()[config.agent]
     agent = agent_class(config)
     agent.run()
