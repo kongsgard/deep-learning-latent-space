@@ -100,9 +100,8 @@ class ThreeDimensionalGANAgent(BaseAgent):
                 real_labels = real_labels.cuda(async=self.config.async_loading)
                 fake_labels = fake_labels.cuda(async=self.config.async_loading)
 
-            # === Train the discriminator ===
+            # === Train the discriminator ===#
             # Train with real data
-            self.d_net.zero_grad()
             d_real_out = self.d_net(x)
             d_real_loss = self.loss(d_real_out, real_labels)
 
@@ -111,6 +110,29 @@ class ThreeDimensionalGANAgent(BaseAgent):
             d_fake_out = self.d_net(g_fake_out.detach())
             d_fake_loss = self.loss(d_fake_out, fake_labels)
 
+            d_loss = d_real_loss + d_fake_loss
+
+            d_real_acu = torch.ge(d_real_out.squeeze(), 0.5).float()
+            d_fake_acu = torch.le(d_fake_out.squeeze(), 0.5).float()
+            d_total_acu = torch.mean(torch.cat((d_real_acu, d_fake_acu), 0))
+
+            if d_total_acu <= self.config.d_threshold:
+                self.d_net.zero_grad()
+                d_loss.backward()
+                # D_solver.step()
+
+            # === Train the generator ===#
+            z = generate_fake_noise(self.config)
+            g_fake_out = self.g_net(z)
+            d_fake_out = self.d_net(g_fake_out)
+            g_loss = self.loss(d_fake_out, real_labels)
+
+            self.d_net.zero_grad()
+            self.g_net.zero_grad()
+            g_loss.backward()
+            #G_solver.step()
+
+            # Plot shapes in visdom
             if curr_it == 0:  # Todo: Refactor
                 plot_voxels_in_visdom(torch.Tensor.numpy(x.cpu()[0]), vis, "shape", "true")
                 plot_voxels_in_visdom(torch.Tensor.numpy(g_fake_out.detach().cpu()[0][0]), vis, "shape", "fake")
