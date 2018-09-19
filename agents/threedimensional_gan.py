@@ -76,8 +76,6 @@ class ThreeDimensionalGANAgent(BaseAgent):
             self.train_one_epoch()
             self.save_checkpoint()
 
-            break  # TODO: Remove
-
     def train_one_epoch(self):
         # Initialize tqdm batch
         tqdm_batch = tqdm(self.dataloader.loader, total=self.dataloader.num_iterations,
@@ -88,8 +86,6 @@ class ThreeDimensionalGANAgent(BaseAgent):
 
         vis = visdom.Visdom()  # TODO: Move
         for curr_it, x in enumerate(tqdm_batch):
-
-
             z = generate_fake_noise(self.config)
             real_labels = torch.ones(self.config.batch_size).view(-1, 1, 1, 1, 1)
             fake_labels = torch.zeros(self.config.batch_size).view(-1, 1, 1, 1, 1)
@@ -99,6 +95,10 @@ class ThreeDimensionalGANAgent(BaseAgent):
                 z = z.cuda(async=self.config.async_loading)
                 real_labels = real_labels.cuda(async=self.config.async_loading)
                 fake_labels = fake_labels.cuda(async=self.config.async_loading)
+
+            if x.size()[0] != int(self.config.batch_size):
+                # print("Batch_size != {} - dropping last incompatible batch".format(int(self.config.batch_size)))
+                continue
 
             # === Train the discriminator ===#
             # Train with real data
@@ -123,6 +123,9 @@ class ThreeDimensionalGANAgent(BaseAgent):
 
             # === Train the generator ===#
             z = generate_fake_noise(self.config)
+            if self.cuda:
+                z = z.cuda(async=self.config.async_loading)
+
             g_fake_out = self.g_net(z)
             d_fake_out = self.d_net(g_fake_out)
             g_loss = self.loss(d_fake_out, real_labels)
@@ -130,17 +133,15 @@ class ThreeDimensionalGANAgent(BaseAgent):
             self.d_net.zero_grad()
             self.g_net.zero_grad()
             g_loss.backward()
-            #G_solver.step()
+            # G_solver.step()
 
             # Plot shapes in visdom
             if curr_it == 0:  # Todo: Refactor
                 plot_voxels_in_visdom(torch.Tensor.numpy(x.cpu()[0]), vis, "shape", "true")
                 plot_voxels_in_visdom(torch.Tensor.numpy(g_fake_out.detach().cpu()[0][0]), vis, "shape", "fake")
 
-            break  # TODO: Remove
-
-        g_epoch_loss.update(100)  # TODO: Fix
-        d_epoch_loss.update(100)  # TODO: Fix
+        #g_epoch_loss.update(g_loss.item())  # TODO: Fix
+        #d_epoch_loss.update(d_loss.item())  # TODO: Fix
 
         tqdm_batch.close()
 
