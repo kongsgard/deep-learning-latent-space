@@ -25,6 +25,12 @@ class ThreeDimensionalGANAgent(BaseAgent):
         # Define dataloader
         self.dataloader = ShapeNetDataLoader(self.config)
 
+        # Define optimizers
+        self.g_solver = torch.optim.Adam(self.g_net.parameters(),
+                                         lr=self.config.g_learning_rate, betas=(self.config.beta1, self.config.beta2))
+        self.d_solver = torch.optim.Adam(self.d_net.parameters(),
+                                         lr=self.config.d_learning_rate, betas=(self.config.beta1, self.config.beta2))
+
         # Define loss
         self.loss = BinaryCrossEntropy()
 
@@ -81,9 +87,6 @@ class ThreeDimensionalGANAgent(BaseAgent):
         tqdm_batch = tqdm(self.dataloader.loader, total=self.dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
 
-        g_epoch_loss = AverageMeter()
-        d_epoch_loss = AverageMeter()
-
         vis = visdom.Visdom()  # TODO: Move
         for curr_it, x in enumerate(tqdm_batch):
             z = generate_fake_noise(self.config)
@@ -119,7 +122,7 @@ class ThreeDimensionalGANAgent(BaseAgent):
             if d_total_acu <= self.config.d_threshold:
                 self.d_net.zero_grad()
                 d_loss.backward()
-                # D_solver.step()
+                self.d_solver.step()
 
             # === Train the generator ===#
             z = generate_fake_noise(self.config)
@@ -133,20 +136,22 @@ class ThreeDimensionalGANAgent(BaseAgent):
             self.d_net.zero_grad()
             self.g_net.zero_grad()
             g_loss.backward()
-            # G_solver.step()
+            self.g_solver.step()
 
             # Plot shapes in visdom
             if curr_it == 0:  # Todo: Refactor
                 plot_voxels_in_visdom(torch.Tensor.numpy(x.cpu()[0]), vis, "shape", "true")
                 plot_voxels_in_visdom(torch.Tensor.numpy(g_fake_out.detach().cpu()[0][0]), vis, "shape", "fake")
 
-        #g_epoch_loss.update(g_loss.item())  # TODO: Fix
-        #d_epoch_loss.update(d_loss.item())  # TODO: Fix
+            self.summary_writer.add_scalar("epoch/Generator_loss", g_loss.data[0], self.current_iteration)
+            self.summary_writer.add_scalar("epoch/Discriminator_loss", d_loss.data[0], self.current_iteration)
+            self.summary_writer.add_scalar("epoch/Generator_loss", d_real_loss.data[0], self.current_iteration)
+            self.summary_writer.add_scalar("epoch/Discriminator_loss", d_fake_loss.data[0], self.current_iteration)
 
         tqdm_batch.close()
 
         self.logger.info("Training at epoch-" + str(self.current_epoch) + " | " + "Generator loss: " + str(
-            g_epoch_loss.val) + " - Discriminator loss: " + str(d_epoch_loss.val))
+            g_loss.data[0]) + " - Discriminator loss: " + str(d_loss.data[0]))
 
     def validate(self):
         pass
