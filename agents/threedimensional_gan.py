@@ -61,6 +61,9 @@ class ThreeDimensionalGANAgent(BaseAgent):
         self.d_net = self.d_net.to(self.device)
         self.loss = self.loss.to(self.device)
 
+        # Load model from the latest checkpoint. If none can be found, start from scratch.
+        self.load_checkpoint(self.config.checkpoint_file)
+
         # Visdom 3D Plotting
         self.vis = visdom.Visdom()
 
@@ -71,7 +74,23 @@ class ThreeDimensionalGANAgent(BaseAgent):
                                                           comment='3DGAN')
 
     def load_checkpoint(self, file_name):
-        pass
+        filename = self.config.checkpoint_dir + file_name
+        try:
+            self.logger.info("Loading checkpoint '{}'".format(filename))
+            checkpoint = torch.load(filename)
+
+            self.current_epoch = checkpoint['epoch']
+            self.current_iteration = checkpoint['iteration']
+            self.g_net.load_state_dict(checkpoint['G_state_dict'])
+            self.g_solver.load_state_dict(checkpoint['G_optimizer'])
+            self.d_net.load_state_dict(checkpoint['D_state_dict'])
+            self.d_solver.load_state_dict(checkpoint['D_optimizer'])
+
+            self.logger.info("Checkpoint loaded successfully from '{}' at (epoch {}) at (iteration {})\n"
+                             .format(self.config.checkpoint_dir, checkpoint['epoch'], checkpoint['iteration']))
+        except OSError as e:
+            self.logger.info("No checkpoint exists from '{}'. Skipping...".format(self.config.checkpoint_dir))
+            self.logger.info("**First time to train**")
 
     def save_checkpoint(self, file_name="checkpoint.pth.tar", is_best=0):
         state = {
@@ -82,8 +101,8 @@ class ThreeDimensionalGANAgent(BaseAgent):
             'D_state_dict': self.d_net.state_dict(),
             'D_optimizer': self.d_solver.state_dict(),
         }
-        # Save the state
         torch.save(state, self.config.checkpoint_dir + file_name)
+
         # If it is the best copy it to another file 'model_best.pth.tar'
         if is_best:
             shutil.copyfile(self.config.checkpoint_dir + file_name,
