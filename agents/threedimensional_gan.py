@@ -64,7 +64,10 @@ class ThreeDimensionalGANAgent(BaseAgent):
         self.vis = visdom.Visdom()
 
         # Summary Writer
-        self.summary_writer = SummaryWriter(log_dir=self.config.summary_dir, comment='3DGAN')
+        self.generator_summary_writer = SummaryWriter(log_dir=self.config.summary_dir + '/generator',
+                                                      comment='3DGAN')
+        self.discriminator_summary_writer = SummaryWriter(log_dir=self.config.summary_dir + '/discriminator',
+                                                          comment='3DGAN')
 
     def load_checkpoint(self, file_name):
         pass
@@ -146,20 +149,24 @@ class ThreeDimensionalGANAgent(BaseAgent):
             g_loss_epoch.update(g_loss.item())
             d_loss_epoch.update(d_loss.item())
 
+            self.current_iteration += 1
+
             # Plot shapes in visdom
             if curr_it == 0:  # Todo: Refactor
                 plot_voxels_in_visdom(torch.Tensor.numpy(x.cpu()[0]), self.vis, "shape", "true")
                 plot_voxels_in_visdom(torch.Tensor.numpy(g_fake_out.detach().cpu()[0][0]), self.vis, "shape", "fake")
 
-            self.summary_writer.add_scalar("epoch/Generator_loss", g_loss.item(), self.current_iteration)
-            self.summary_writer.add_scalar("epoch/Discriminator_loss", d_loss.item(), self.current_iteration)
-            self.summary_writer.add_scalar("epoch/Generator_loss", d_real_loss.item(), self.current_iteration)
-            self.summary_writer.add_scalar("epoch/Discriminator_loss", d_fake_loss.item(), self.current_iteration)
+            self.generator_summary_writer.add_scalar("iteration/loss", g_loss.item(), self.current_iteration)
+            self.discriminator_summary_writer.add_scalar("iteration/loss", d_loss.item(), self.current_iteration)
+            self.discriminator_summary_writer.add_scalar("iteration/real_loss", d_real_loss.item(), self.current_iteration)
+            self.discriminator_summary_writer.add_scalar("iteration/fake_loss", d_fake_loss.item(), self.current_iteration)
 
         tqdm_batch.close()
 
         self.logger.info("Training at epoch-{:d} | Generator loss: {:.3f} - Discriminator loss: {:.3f}"
                          .format(self.current_epoch, g_loss_epoch.val, d_loss_epoch.val))
+        self.generator_summary_writer.add_scalar("epoch/loss", g_loss_epoch.val, self.current_epoch)
+        self.discriminator_summary_writer.add_scalar("epoch/loss", d_loss_epoch.val, self.current_epoch)
 
     def validate(self):
         pass
@@ -167,6 +174,10 @@ class ThreeDimensionalGANAgent(BaseAgent):
     def finalize(self):
         self.logger.info("Agent has finished running - wait to finalize...")
         self.save_checkpoint()
-        self.summary_writer.export_scalars_to_json("{}all_scalars.json".format(self.config.summary_dir))
-        self.summary_writer.close()
+
+        self.generator_summary_writer.export_scalars_to_json("{}all_scalars.json".format(self.config.summary_dir))
+        self.generator_summary_writer.close()
+        self.discriminator_summary_writer.export_scalars_to_json("{}all_scalars.json".format(self.config.summary_dir))
+        self.discriminator_summary_writer.close()
+
         self.dataloader.finalize()
