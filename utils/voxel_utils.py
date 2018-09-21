@@ -2,6 +2,7 @@ import numpy as np
 import scipy.ndimage as nd
 import scipy.io as io
 import skimage.measure as sk
+import torch
 import visdom
 
 
@@ -23,6 +24,16 @@ def plot_voxels_in_visdom(voxels, vis, plot_title="shape", window_title="shape")
     """Visdom voxel plot"""
     v, f = get_vertices_and_faces_by_marching_cubes(voxels)
     vis.mesh(X=v, Y=f, opts=dict(opacity=0.5, title=plot_title), win=window_title)
+
+
+def generate_fake_noise(config):
+    if config.z_distribution == "normal":
+        z = torch.Tensor(config.batch_size, config.z_size).normal_(0, 0.33)
+    elif config.z_distribution == "uniform":
+        z = torch.randn(config.batch_size, config.z_size)
+    else:
+        print("z_distribution is not normal or uniform")
+    return z
 
 
 def main():
