@@ -87,6 +87,9 @@ class ThreeDimensionalGANAgent(BaseAgent):
         tqdm_batch = tqdm(self.dataloader.loader, total=self.dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
 
+        g_loss_epoch = AverageMeter()
+        d_loss_epoch = AverageMeter()
+
         vis = visdom.Visdom()  # TODO: Move
         for curr_it, x in enumerate(tqdm_batch):
             z = generate_fake_noise(self.config)
@@ -138,20 +141,23 @@ class ThreeDimensionalGANAgent(BaseAgent):
             g_loss.backward()
             self.g_solver.step()
 
+            g_loss_epoch.update(g_loss.item())
+            d_loss_epoch.update(d_loss.item())
+
             # Plot shapes in visdom
             if curr_it == 0:  # Todo: Refactor
                 plot_voxels_in_visdom(torch.Tensor.numpy(x.cpu()[0]), vis, "shape", "true")
                 plot_voxels_in_visdom(torch.Tensor.numpy(g_fake_out.detach().cpu()[0][0]), vis, "shape", "fake")
 
-            self.summary_writer.add_scalar("epoch/Generator_loss", g_loss.data[0], self.current_iteration)
-            self.summary_writer.add_scalar("epoch/Discriminator_loss", d_loss.data[0], self.current_iteration)
-            self.summary_writer.add_scalar("epoch/Generator_loss", d_real_loss.data[0], self.current_iteration)
-            self.summary_writer.add_scalar("epoch/Discriminator_loss", d_fake_loss.data[0], self.current_iteration)
+            self.summary_writer.add_scalar("epoch/Generator_loss", g_loss.item(), self.current_iteration)
+            self.summary_writer.add_scalar("epoch/Discriminator_loss", d_loss.item(), self.current_iteration)
+            self.summary_writer.add_scalar("epoch/Generator_loss", d_real_loss.item(), self.current_iteration)
+            self.summary_writer.add_scalar("epoch/Discriminator_loss", d_fake_loss.item(), self.current_iteration)
 
         tqdm_batch.close()
 
-        self.logger.info("Training at epoch-" + str(self.current_epoch) + " | " + "Generator loss: " + str(
-            g_loss.data[0]) + " - Discriminator loss: " + str(d_loss.data[0]))
+        self.logger.info("Training at epoch-{:d} | Generator loss: {:.3f} - Discriminator loss: {:.3f}"
+                         .format(self.current_epoch, g_loss_epoch.val, d_loss_epoch.val))
 
     def validate(self):
         pass
