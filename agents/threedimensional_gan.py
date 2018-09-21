@@ -181,6 +181,7 @@ class ThreeDimensionalGANAgent(BaseAgent):
             g_loss.backward()
             self.g_optimizer.step()
 
+            # Update and log the current loss
             g_loss_epoch.update(g_loss.item())
             d_loss_epoch.update(d_loss.item())
 
@@ -193,8 +194,10 @@ class ThreeDimensionalGANAgent(BaseAgent):
 
             self.generator_summary_writer.add_scalar("iteration/loss", g_loss.item(), self.current_iteration)
             self.discriminator_summary_writer.add_scalar("iteration/loss", d_loss.item(), self.current_iteration)
-            self.discriminator_summary_writer.add_scalar("iteration/real_loss", d_real_loss.item(), self.current_iteration)
-            self.discriminator_summary_writer.add_scalar("iteration/fake_loss", d_fake_loss.item(), self.current_iteration)
+            self.discriminator_summary_writer.add_scalar("iteration/real_loss",
+                                                         d_real_loss.item(), self.current_iteration)
+            self.discriminator_summary_writer.add_scalar("iteration/fake_loss",
+                                                         d_fake_loss.item(), self.current_iteration)
 
         tqdm_batch.close()
 
