@@ -27,10 +27,12 @@ class ThreeDimensionalGANAgent(BaseAgent):
         self.dataloader = ShapeNetDataLoader(self.config)
 
         # Define optimizers
-        self.g_solver = torch.optim.Adam(self.g_net.parameters(),
-                                         lr=self.config.g_learning_rate, betas=(self.config.beta1, self.config.beta2))
-        self.d_solver = torch.optim.Adam(self.d_net.parameters(),
-                                         lr=self.config.d_learning_rate, betas=(self.config.beta1, self.config.beta2))
+        self.g_optimizer = torch.optim.Adam(self.g_net.parameters(),
+                                            lr=self.config.g_learning_rate,
+                                            betas=(self.config.beta1, self.config.beta2))
+        self.d_optimizer = torch.optim.Adam(self.d_net.parameters(),
+                                            lr=self.config.d_learning_rate,
+                                            betas=(self.config.beta1, self.config.beta2))
 
         # Define loss
         self.loss = BinaryCrossEntropy()
@@ -82,9 +84,9 @@ class ThreeDimensionalGANAgent(BaseAgent):
             self.current_epoch = checkpoint['epoch']
             self.current_iteration = checkpoint['iteration']
             self.g_net.load_state_dict(checkpoint['G_state_dict'])
-            self.g_solver.load_state_dict(checkpoint['G_optimizer'])
+            self.g_optimizer.load_state_dict(checkpoint['G_optimizer'])
             self.d_net.load_state_dict(checkpoint['D_state_dict'])
-            self.d_solver.load_state_dict(checkpoint['D_optimizer'])
+            self.d_optimizer.load_state_dict(checkpoint['D_optimizer'])
 
             self.logger.info("Checkpoint loaded successfully from '{}' at (epoch {}) at (iteration {})\n"
                              .format(self.config.checkpoint_dir, checkpoint['epoch'], checkpoint['iteration']))
@@ -97,9 +99,9 @@ class ThreeDimensionalGANAgent(BaseAgent):
             'epoch': self.current_epoch,
             'iteration': self.current_iteration,
             'G_state_dict': self.g_net.state_dict(),
-            'G_optimizer': self.g_solver.state_dict(),
+            'G_optimizer': self.g_optimizer.state_dict(),
             'D_state_dict': self.d_net.state_dict(),
-            'D_optimizer': self.d_solver.state_dict(),
+            'D_optimizer': self.d_optimizer.state_dict(),
         }
         torch.save(state, self.config.checkpoint_dir + file_name)
 
@@ -163,7 +165,7 @@ class ThreeDimensionalGANAgent(BaseAgent):
             if d_total_acu <= self.config.d_threshold:
                 self.d_net.zero_grad()
                 d_loss.backward()
-                self.d_solver.step()
+                self.d_optimizer.step()
 
             # === Train the generator ===#
             z = generate_fake_noise(self.config)
@@ -177,7 +179,7 @@ class ThreeDimensionalGANAgent(BaseAgent):
             self.d_net.zero_grad()
             self.g_net.zero_grad()
             g_loss.backward()
-            self.g_solver.step()
+            self.g_optimizer.step()
 
             g_loss_epoch.update(g_loss.item())
             d_loss_epoch.update(d_loss.item())
