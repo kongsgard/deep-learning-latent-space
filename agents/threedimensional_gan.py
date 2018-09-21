@@ -1,3 +1,4 @@
+import shutil
 from tqdm import tqdm
 
 from tensorboardX import SummaryWriter
@@ -73,7 +74,20 @@ class ThreeDimensionalGANAgent(BaseAgent):
         pass
 
     def save_checkpoint(self, file_name="checkpoint.pth.tar", is_best=0):
-        pass
+        state = {
+            'epoch': self.current_epoch,
+            'iteration': self.current_iteration,
+            'G_state_dict': self.g_net.state_dict(),
+            'G_optimizer': self.g_solver.state_dict(),
+            'D_state_dict': self.d_net.state_dict(),
+            'D_optimizer': self.d_solver.state_dict(),
+        }
+        # Save the state
+        torch.save(state, self.config.checkpoint_dir + file_name)
+        # If it is the best copy it to another file 'model_best.pth.tar'
+        if is_best:
+            shutil.copyfile(self.config.checkpoint_dir + file_name,
+                            self.config.checkpoint_dir + 'model_best.pth.tar')
 
     def run(self):
         try:
