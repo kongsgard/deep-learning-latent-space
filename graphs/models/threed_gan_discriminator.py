@@ -18,30 +18,32 @@ class Discriminator(nn.Module):
             padding = (1, 1, 1)
 
         self.layer1 = nn.Sequential(
-            nn.Conv3d(1, self.cube_len, kernel_size=4, stride=2, bias=self.config.bias, padding=(1, 1, 1)),
+            nn.Conv3d(1, self.cube_len, kernel_size=4, stride=2,
+                      bias=self.config.bias, padding=(1, 1, 1)),
             nn.BatchNorm3d(self.cube_len),
             nn.LeakyReLU(self.config.leak_value)
         )
         self.layer2 = nn.Sequential(
-            nn.Conv3d(self.cube_len, self.cube_len * 2, kernel_size=4, stride=2, bias=self.config.bias,
-                      padding=(1, 1, 1)),
+            nn.Conv3d(self.cube_len, self.cube_len * 2, kernel_size=4, stride=2,
+                      bias=self.config.bias, padding=(1, 1, 1)),
             nn.BatchNorm3d(self.cube_len * 2),
             nn.LeakyReLU(self.config.leak_value)
         )
         self.layer3 = nn.Sequential(
-            nn.Conv3d(self.cube_len * 2, self.cube_len * 4, kernel_size=4, stride=2, bias=self.config.bias,
-                      padding=(1, 1, 1)),
+            nn.Conv3d(self.cube_len * 2, self.cube_len * 4, kernel_size=4, stride=2,
+                      bias=self.config.bias, padding=(1, 1, 1)),
             nn.BatchNorm3d(self.cube_len * 4),
             nn.LeakyReLU(self.config.leak_value)
         )
         self.layer4 = nn.Sequential(
-            nn.Conv3d(self.cube_len * 4, self.cube_len * 8, kernel_size=4, stride=2, bias=self.config.bias,
-                      padding=(1, 1, 1)),
+            nn.Conv3d(self.cube_len * 4, self.cube_len * 8, kernel_size=4, stride=2,
+                      bias=self.config.bias, padding=(1, 1, 1)),
             nn.BatchNorm3d(self.cube_len * 8),
             nn.LeakyReLU(self.config.leak_value)
         )
         self.layer5 = nn.Sequential(
-            nn.Conv3d(self.cube_len * 8, 1, kernel_size=4, stride=2, bias=self.config.bias, padding=padding),
+            nn.Conv3d(self.cube_len * 8, 1, kernel_size=4, stride=2,
+                      bias=self.config.bias, padding=padding),
             nn.Sigmoid()
         )
 
@@ -52,7 +54,6 @@ class Discriminator(nn.Module):
         out = self.layer3(out)
         out = self.layer4(out)
         out = self.layer5(out)
-        return out
         return out
 
 
