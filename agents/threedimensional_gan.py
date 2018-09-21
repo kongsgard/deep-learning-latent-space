@@ -60,6 +60,9 @@ class ThreeDimensionalGANAgent(BaseAgent):
         self.d_net = self.d_net.to(self.device)
         self.loss = self.loss.to(self.device)
 
+        # Visdom 3D Plotting
+        self.vis = visdom.Visdom()
+
         # Summary Writer
         self.summary_writer = SummaryWriter(log_dir=self.config.summary_dir, comment='3DGAN')
 
@@ -90,7 +93,6 @@ class ThreeDimensionalGANAgent(BaseAgent):
         g_loss_epoch = AverageMeter()
         d_loss_epoch = AverageMeter()
 
-        vis = visdom.Visdom()  # TODO: Move
         for curr_it, x in enumerate(tqdm_batch):
             z = generate_fake_noise(self.config)
             real_labels = torch.ones(self.config.batch_size).view(-1, 1, 1, 1, 1)
@@ -146,8 +148,8 @@ class ThreeDimensionalGANAgent(BaseAgent):
 
             # Plot shapes in visdom
             if curr_it == 0:  # Todo: Refactor
-                plot_voxels_in_visdom(torch.Tensor.numpy(x.cpu()[0]), vis, "shape", "true")
-                plot_voxels_in_visdom(torch.Tensor.numpy(g_fake_out.detach().cpu()[0][0]), vis, "shape", "fake")
+                plot_voxels_in_visdom(torch.Tensor.numpy(x.cpu()[0]), self.vis, "shape", "true")
+                plot_voxels_in_visdom(torch.Tensor.numpy(g_fake_out.detach().cpu()[0][0]), self.vis, "shape", "fake")
 
             self.summary_writer.add_scalar("epoch/Generator_loss", g_loss.item(), self.current_iteration)
             self.summary_writer.add_scalar("epoch/Discriminator_loss", d_loss.item(), self.current_iteration)
