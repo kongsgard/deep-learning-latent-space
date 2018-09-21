@@ -47,18 +47,12 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         out = x.view(-1, 1, self.config.cube_len, self.config.cube_len, self.config.cube_len)
-        #print(out.size()) # torch.Size([100, 1, 64, 64, 64])
         out = self.layer1(out)
-        #print(out.size())  # torch.Size([100, 64, 32, 32, 32])
         out = self.layer2(out)
-        #print(out.size())  # torch.Size([100, 128, 16, 16, 16])
         out = self.layer3(out)
-        #print(out.size())  # torch.Size([100, 256, 8, 8, 8])
         out = self.layer4(out)
-        #print(out.size())  # torch.Size([100, 512, 4, 4, 4])
         out = self.layer5(out)
-        #print(out.size())  # torch.Size([100, 200, 1, 1, 1])
-
+        return out
         return out
 
 
@@ -68,10 +62,9 @@ def main():
     config = edict(config)
     inp = torch.autograd.Variable(torch.randn(1, 20, 64, 64, 64))
     print("input shape:", inp.shape)
-    #print(inp.shape)
-    g_net = Discriminator(config)
-    out = g_net(inp)
-    #print(out.shape)
+    d_net = Discriminator(config)
+    out = d_net(inp)
+    print("output shape:", out.shape)
 
 
 if __name__ == '__main__':
