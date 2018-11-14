@@ -114,3 +114,6 @@ pretrained_weights/
 # Data
 data/
 !data/.keep
+
+# CMake
+cmake-build-debug
