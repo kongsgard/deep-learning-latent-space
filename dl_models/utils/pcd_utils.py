@@ -35,25 +35,50 @@ def custom_draw_geometry_with_key_callback(pcd, *args):
     open3d.draw_geometries_with_key_callbacks([pcd, *args], key_to_callback)
 
 
-def scale_points_to_unit_sphere(points):
-    max_point = points.max()
-    min_point = points.min()
+def create_unit_coordinate_frame():
+    return open3d.create_mesh_coordinate_frame(size = 0.5, origin = [0, 0, 0])
 
-    points_range = max_point - min_point
-    points_scaled = ((points - min_point) / points_range - 0.5) * 2
 
-    return points_scaled - points_scaled.mean(axis=0)
+class PointsTransform:
+    """
+    Class to transform points to be axis aligned and centered in the unit sphere, while keeping the inverse transform
+    """
+    def __init__(self, points):
+        self.points = points
+        self.max = points.max()
+        self.min = points.min()
+        self.range = self.max - self.min
+        self.mean = points.mean(axis=0)
+
+    def scale_points_to_unit_sphere(self):
+        points_scaled = ((self.points - self.min) / self.range - 0.5) * 2
+        self.points = points_scaled - points_scaled.mean(axis=0)
+
+    def axis_align_points(self):
+        pass
+
+    def scale_points_to_original_world_coordinates(self):
+        pass
+
+    
+
+    def downscale_points(self, number_of_points):
+        pass
+
+
 
 if __name__ == '__main__':
     pcd_points = read_pcd('../data/ankylosaurus_mesh.ply')
-    pcd_plane = open3d.read_point_cloud('../data/1a04e3eab45ca15dd86060f189eb133.ply')
+    # pcd_plane = open3d.read_point_cloud('../data/1a04e3eab45ca15dd86060f189eb133.ply')
 
     pcd = open3d.PointCloud()
     pcd.points = open3d.Vector3dVector(pcd_points)
 
-    pcd_scaled = open3d.PointCloud()
-    pcd_scaled.points = open3d.Vector3dVector(scale_points_to_unit_sphere(pcd_points))
+    points_transformed = PointsTransform(pcd_points)
+    points_transformed.scale_points_to_unit_sphere()
 
-    mesh_frame = open3d.create_mesh_coordinate_frame(size = 0.5, origin = [0, 0, 0])
-    custom_draw_geometry_with_key_callback(pcd, pcd_scaled, pcd_plane, mesh_frame)
-    
+    pcd_scaled = open3d.PointCloud()
+    pcd_scaled.points = open3d.Vector3dVector(points_transformed.points)
+
+    mesh_frame = create_unit_coordinate_frame()
+    custom_draw_geometry_with_key_callback(pcd, pcd_scaled, mesh_frame)
