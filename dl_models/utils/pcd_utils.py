@@ -49,22 +49,26 @@ class PointsTransform:
         self.min = points.min()
         self.range = self.max - self.min
         self.mean = points.mean(axis=0)
+        self.scaled_mean = 0
+        self.has_scaled_to_unit_sphere = False
 
     def scale_points_to_unit_sphere(self):
         points_scaled = ((self.points - self.min) / self.range - 0.5) * 2
-        self.points = points_scaled - points_scaled.mean(axis=0)
+        self.scaled_mean = points_scaled.mean(axis=0)
+        self.points = points_scaled - self.scaled_mean
+        self.has_scaled_to_unit_sphere = True
 
     def axis_align_points(self):
-        pass
+        u, s, vh = np.linalg.svd(self.points, full_matrices=False)
+        self.points = np.matmul(self.points, vh)
 
     def scale_points_to_original_world_coordinates(self):
-        pass
-
-    
+        if self.has_scaled_to_unit_sphere:
+            points_scaled = self.points + self.scaled_mean
+            self.points = (points_scaled/2 + 0.5) * self.range + self.min
 
     def downscale_points(self, number_of_points):
         pass
-
 
 
 if __name__ == '__main__':
@@ -75,10 +79,16 @@ if __name__ == '__main__':
     pcd.points = open3d.Vector3dVector(pcd_points)
 
     points_transformed = PointsTransform(pcd_points)
+    
+    # Scale points
     points_transformed.scale_points_to_unit_sphere()
-
     pcd_scaled = open3d.PointCloud()
     pcd_scaled.points = open3d.Vector3dVector(points_transformed.points)
 
+    # Inverse transform points back to world coordinates
+    points_transformed.scale_points_to_original_world_coordinates()
+    pcd_world = open3d.PointCloud()
+    pcd_world.points = open3d.Vector3dVector(points_transformed.points)
+
     mesh_frame = create_unit_coordinate_frame()
-    custom_draw_geometry_with_key_callback(pcd, pcd_scaled, mesh_frame)
+    custom_draw_geometry_with_key_callback(pcd_scaled, pcd_world, mesh_frame)
