@@ -54,6 +54,9 @@ class PointsTransform:
         self.has_axis_aligned_points = False
 
     def scale_points_to_unit_sphere(self):
+        if self.min > -1 and self.max < 1:
+            # The point cloud is already within the unit sphere
+            return
         points_scaled = ((self.points - self.min) / self.range - 0.5) * 2
         self.scaled_mean = points_scaled.mean(axis=0)
         self.points = points_scaled - self.scaled_mean
@@ -77,9 +80,15 @@ class PointsTransform:
         pass
 
 
+def pcd_uniform_down_sample(pcd, target_number_of_points):
+    every_k_points = np.shape(pcd.points)[0] // target_number_of_points
+    pcd_down = open3d.uniform_down_sample(pcd, every_k_points = every_k_points)
+    pcd_down.points = pcd_down.points[0:target_number_of_points]
+    return pcd_down
+
 if __name__ == '__main__':
     pcd_points = read_pcd('../data/ankylosaurus_mesh.ply')
-    # pcd_plane = open3d.read_point_cloud('../data/1a04e3eab45ca15dd86060f189eb133.ply')
+    # pcd_points = read_pcd('../data/1a04e3eab45ca15dd86060f189eb133.ply')
 
     pcd = open3d.PointCloud()
     pcd.points = open3d.Vector3dVector(pcd_points)
@@ -96,10 +105,13 @@ if __name__ == '__main__':
     pcd_aligned = open3d.PointCloud()
     pcd_aligned.points = open3d.Vector3dVector(points_transformed.points)
 
+    # Downsample
+    pcd_down = pcd_uniform_down_sample(pcd_aligned, target_number_of_points=2048)
+
     # Inverse transform points back to world coordinates
     points_transformed.scale_points_to_original_world_coordinates()
     pcd_world = open3d.PointCloud()
     pcd_world.points = open3d.Vector3dVector(points_transformed.points)
 
     mesh_frame = create_unit_coordinate_frame()
-    custom_draw_geometry_with_key_callback(pcd, pcd_scaled, mesh_frame)
+    custom_draw_geometry_with_key_callback(pcd, pcd_down, mesh_frame)
