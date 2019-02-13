@@ -107,6 +107,7 @@ if __name__ == '__main__':
 
     # Downsample
     pcd_down = pcd_uniform_down_sample(pcd_aligned, target_number_of_points=2048)
+    pcd_down.paint_uniform_color([1, 0.706, 0])
 
     # Inverse transform points back to world coordinates
     points_transformed.scale_points_to_original_world_coordinates()
