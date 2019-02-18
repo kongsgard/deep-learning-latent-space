@@ -15,11 +15,12 @@ def resample_pcd(pcd, n):
 class ShapeNetPointCloudDataset(data.Dataset):
     """Custom Dataset compatible with torch.utils.data.DataLoader"""
 
-    def __init__(self, config):
+    def __init__(self, config, dataset_mode):
         """Set the path for Data."""
         self.data_folder = config.data_folder
+        self.dataset_mode = dataset_mode
 
-        self.df = dataflow.LMDBSerializer.load(self.data_folder + 'valid.lmdb', shuffle=False)
+        self.df = dataflow.LMDBSerializer.load(self.data_folder + self.dataset_mode + '.lmdb', shuffle=False)
 
     def __getitem__(self, index):
         points = next(self.df.get_data())[1]
@@ -30,11 +31,12 @@ class ShapeNetPointCloudDataset(data.Dataset):
 
 
 class ShapeNetPointCloudDataLoader:
-    def __init__(self, config):
+    def __init__(self, config, dataset_mode):
         self.config = config
+        self.dataset_mode = dataset_mode
 
         if config.data_mode == "shapes":
-            dataset = ShapeNetPointCloudDataset(self.config)
+            dataset = ShapeNetPointCloudDataset(self.config, self.dataset_mode)
 
             self.dataset_len = dataset.__len__()
 

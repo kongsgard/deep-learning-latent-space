@@ -17,7 +17,7 @@ class PointCompletionNetworkAgent(BaseAgent):
 
 
         # Define dataloader
-        self.dataloader = ShapeNetPointCloudDataLoader(self.config)
+        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, dataset_mode='train')
 
         # Define optimizer
         #self.optimizer = torch.optim.Adam(self.g_net.parameters(),
@@ -99,7 +99,7 @@ class PointCompletionNetworkAgent(BaseAgent):
 
     def train_one_epoch(self):
         # Initialize tqdm batch
-        tqdm_batch = tqdm(self.dataloader.loader, total=self.dataloader.num_iterations,
+        tqdm_batch = tqdm(self.train_dataloader.loader, total=self.train_dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
 
         for curr_it, x in enumerate(tqdm_batch):
@@ -115,4 +115,4 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.summary_writer.export_scalars_to_json("{}all_scalars.json".format(self.config.summary_dir))
         self.summary_writer.close()
 
-        self.dataloader.finalize()
+        self.train_dataloader.finalize()
