@@ -103,6 +103,7 @@ class PointCompletionNetworkAgent(BaseAgent):
                           desc="epoch-{}-".format(self.current_epoch))
 
         for curr_it, x in enumerate(tqdm_batch):
+            id, input, gt = x
             break # TODO: Remove
 
     def validate(self):
