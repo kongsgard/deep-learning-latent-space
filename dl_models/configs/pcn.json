@@ -7,7 +7,7 @@
   "gpu_device": 0,
   "seed": 12345,
 
-  "max_epoch": 1000,
+  "max_epoch": 10,
   "batch_size": 32,
 
   "num_input_points": 2048,
@@ -19,7 +19,7 @@
   "checkpoint_file": "checkpoint.pth.tar",
 
   "data_loader": "ShapeNetDataLoader",
-  "data_loader_workers": 1,
+  "data_loader_workers": 0,
   "pin_memory": true,
   "async_loading": true,
 

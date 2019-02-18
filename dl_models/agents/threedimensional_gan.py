@@ -9,7 +9,7 @@ from agents.base import BaseAgent
 from graphs.losses.bce import BinaryCrossEntropy
 from graphs.models.threed_gan_generator import Generator
 from graphs.models.threed_gan_discriminator import Discriminator
-from datasets.shapenet import ShapeNetDataLoader
+from datasets.shapenet_voxel import ShapeNetDataLoader
 from utils.metrics import AverageMeter
 from utils.misc import print_cuda_statistics
 from utils.voxel_utils import generate_fake_noise, plot_voxels_in_visdom

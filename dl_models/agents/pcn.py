@@ -1,9 +1,13 @@
 from tqdm import tqdm
 
+from tensorboardX import SummaryWriter
 import torch
 
 from agents.base import BaseAgent
+from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
 from utils.misc import print_cuda_statistics
+
+import numpy as np # TODO: Remove
 
 class PointCompletionNetworkAgent(BaseAgent):
     def __init__(self, config):
@@ -13,6 +17,7 @@ class PointCompletionNetworkAgent(BaseAgent):
 
 
         # Define dataloader
+        self.dataloader = ShapeNetPointCloudDataLoader(self.config)
 
         # Define optimizer
         #self.optimizer = torch.optim.Adam(self.g_net.parameters(),
@@ -47,7 +52,10 @@ class PointCompletionNetworkAgent(BaseAgent):
         # Load model from the latest checkpoint. If none can be found, start from scratch.
         self.load_checkpoint(self.config.checkpoint_file)
 
-    # Summary Writer
+        # Summary Writer
+        self.summary_writer = SummaryWriter(log_dir=self.config.summary_dir,
+                                                      comment='PCN')
+
     def load_checkpoint(self, file_name):
         filename = self.config.checkpoint_dir + file_name
         try:
@@ -56,10 +64,6 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             self.current_epoch = checkpoint['epoch']
             self.current_iteration = checkpoint['iteration']
-            self.g_net.load_state_dict(checkpoint['G_state_dict'])
-            self.g_optimizer.load_state_dict(checkpoint['G_optimizer'])
-            self.d_net.load_state_dict(checkpoint['D_state_dict'])
-            self.d_optimizer.load_state_dict(checkpoint['D_optimizer'])
 
             self.logger.info("Checkpoint loaded successfully from '{}' at (epoch {}) at (iteration {})\n"
                              .format(self.config.checkpoint_dir, checkpoint['epoch'], checkpoint['iteration']))
@@ -71,10 +75,6 @@ class PointCompletionNetworkAgent(BaseAgent):
         state = {
             'epoch': self.current_epoch,
             'iteration': self.current_iteration,
-            'G_state_dict': self.g_net.state_dict(),
-            'G_optimizer': self.g_optimizer.state_dict(),
-            'D_state_dict': self.d_net.state_dict(),
-            'D_optimizer': self.d_optimizer.state_dict(),
         }
         torch.save(state, self.config.checkpoint_dir + file_name)
 
@@ -95,14 +95,16 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.current_epoch = epoch
             self.train_one_epoch()
             self.save_checkpoint()
+            break # TODO: Remove
 
     def train_one_epoch(self):
         # Initialize tqdm batch
         tqdm_batch = tqdm(self.dataloader.loader, total=self.dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
 
-
-        #for curr_it, x in enumerate(tqdm_batch):
+        print(len(enumerate(tqdm_batch)))
+        for curr_it, x in enumerate(tqdm_batch):
+            break # TODO: Remove
 
     def validate(self):
         pass
@@ -111,9 +113,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.logger.info("Agent has finished running - wait to finalize...")
         self.save_checkpoint()
 
-        self.generator_summary_writer.export_scalars_to_json("{}all_scalars.json".format(self.config.summary_dir))
-        self.generator_summary_writer.close()
-        self.discriminator_summary_writer.export_scalars_to_json("{}all_scalars.json".format(self.config.summary_dir))
-        self.discriminator_summary_writer.close()
+        self.summary_writer.export_scalars_to_json("{}all_scalars.json".format(self.config.summary_dir))
+        self.summary_writer.close()
 
         self.dataloader.finalize()

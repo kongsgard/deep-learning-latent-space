@@ -3,7 +3,14 @@ import os
 import torch
 from torch.utils import data
 
-from pcd_utils import read_pcd, custom_draw_geometry_with_key_callback, create_unit_coordinate_frame
+from tensorpack import dataflow
+
+def resample_pcd(pcd, n):
+        """Drop or duplicate points so that pcd has exactly n points"""
+        index = np.random.permutation(pcd.shape[0])
+        if index.shape[0] < n:
+            index = np.concatenate([index, np.random.randint(pcd.shape[0], size=n-pcd.shape[0])])
+        return pcd[idx[:n]]
 
 class ShapeNetPointCloudDataset(data.Dataset):
     """Custom Dataset compatible with torch.utils.data.DataLoader"""
@@ -11,24 +18,17 @@ class ShapeNetPointCloudDataset(data.Dataset):
     def __init__(self, config):
         """Set the path for Data."""
         self.data_folder = config.data_folder
-        self.listdir = os.listdir(self.data_folder)
 
+        self.df = dataflow.LMDBSerializer.load(self.data_folder + 'valid.lmdb', shuffle=False)
 
     def __getitem__(self, index):
+        # assert index <= len(self), 'index range error'
+        print(np.shape(next(self.df.get_data())[1]))
+        return next(self.df.get_data())[1]
         
-        with open(self.data_folder + self.listdir[index], "rb") as f:
-            volume = np.asarray(get_voxels_from_mat(f, self.cube_len), dtype=np.float32)
-        return torch.FloatTensor(volume)
-
     def __len__(self):
-        return len(self.listdir)
-
-    def resample_pcd(pcd, n):
-        """Drop or duplicate points so that pcd has exactly n points"""
-        index = np.random.permutation(pcd.shape[0])
-        if index.shape[0] < n:
-            index = np.concatenate([index, np.random.randint(pcd.shape[0], size=n-pcd.shape[0])])
-        return pcd[idx[:n]]
+        print(self.df.size())
+        return self.df.size()
 
 
 class ShapeNetPointCloudDataLoader:
@@ -52,12 +52,3 @@ class ShapeNetPointCloudDataLoader:
 
     def finalize(self):
         pass
-
-if __name__ == '__main__':
-    
-
-    pcd = create_unit_coordinate_frame()
-    # Visualize the point cloud
-    #pcd = open3d.PointCloud()
-    #pcd.points = open3d.Vector3dVector(shape.points)
-    custom_draw_geometry_with_key_callback(pcd)
