@@ -22,12 +22,10 @@ class ShapeNetPointCloudDataset(data.Dataset):
         self.df = dataflow.LMDBSerializer.load(self.data_folder + 'valid.lmdb', shuffle=False)
 
     def __getitem__(self, index):
-        # assert index <= len(self), 'index range error'
-        print(np.shape(next(self.df.get_data())[1]))
-        return next(self.df.get_data())[1]
+        points = next(self.df.get_data())[1]
+        return torch.FloatTensor(points)
         
     def __len__(self):
-        print(self.df.size())
         return self.df.size()
 
 

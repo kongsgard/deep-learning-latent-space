@@ -102,7 +102,6 @@ class PointCompletionNetworkAgent(BaseAgent):
         tqdm_batch = tqdm(self.dataloader.loader, total=self.dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
 
-        print(len(enumerate(tqdm_batch)))
         for curr_it, x in enumerate(tqdm_batch):
             break # TODO: Remove
 
