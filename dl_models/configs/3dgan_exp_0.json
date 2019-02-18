@@ -1,5 +1,5 @@
 {
-  "exp_name": "3dgan_exp_img",
+  "exp_name": "3dgan_exp_1",
   "agent": "ThreeDimensionalGANAgent",
   "mode": "train",
 
