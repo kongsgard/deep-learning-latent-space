@@ -10,7 +10,7 @@ def resample_pcd(pcd, n):
         index = np.random.permutation(pcd.shape[0])
         if index.shape[0] < n:
             index = np.concatenate([index, np.random.randint(pcd.shape[0], size=n-pcd.shape[0])])
-        return pcd[idx[:n]]
+        return pcd[index[:n]]
 
 class ShapeNetPointCloudDataset(data.Dataset):
     """Custom Dataset compatible with torch.utils.data.DataLoader"""
@@ -18,14 +18,17 @@ class ShapeNetPointCloudDataset(data.Dataset):
     def __init__(self, config, dataset_mode):
         """Set the path for Data."""
         self.data_folder = config.data_folder
+        self.num_input_points = config.num_input_points
+        self.num_gt_points = config.num_gt_points
         self.dataset_mode = dataset_mode
 
         self.df = dataflow.LMDBSerializer.load(self.data_folder + self.dataset_mode + '.lmdb', shuffle=False)
 
-
     def __getitem__(self, index):
-        id, input, gt = next(self.df.get_data())
-        return id, torch.FloatTensor(input), torch.FloatTensor(gt)
+        ids, input_points, gt_points = next(self.df.get_data())
+        input_points = resample_pcd(input_points, self.num_input_points)
+        gt_points = resample_pcd(gt_points, self.num_gt_points)
+        return ids, torch.FloatTensor(input_points), torch.FloatTensor(gt_points)
         
     def __len__(self):
         return self.df.size()

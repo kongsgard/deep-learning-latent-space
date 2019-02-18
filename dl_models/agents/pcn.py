@@ -7,8 +7,6 @@ from agents.base import BaseAgent
 from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
 from utils.misc import print_cuda_statistics
 
-import numpy as np # TODO: Remove
-
 class PointCompletionNetworkAgent(BaseAgent):
     def __init__(self, config):
         super().__init__(config)
@@ -103,7 +101,7 @@ class PointCompletionNetworkAgent(BaseAgent):
                           desc="epoch-{}-".format(self.current_epoch))
 
         for curr_it, x in enumerate(tqdm_batch):
-            id, input, gt = x
+            ids, input_points, gt_points = x
             break # TODO: Remove
 
     def validate(self):
