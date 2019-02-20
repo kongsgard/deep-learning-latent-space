@@ -117,3 +117,6 @@ data/
 
 # CMake
 cmake-build-debug
+
+# VSCode
+.vscode
