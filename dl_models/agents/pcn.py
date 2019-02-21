@@ -5,7 +5,7 @@ import torch
 
 from agents.base import BaseAgent
 from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
-#import utils.pcd.chamfer.dist_chamfer as chamfer
+import utils.pcd.dist_chamfer as chamfer
 from utils.misc import print_cuda_statistics
 
 class PointCompletionNetworkAgent(BaseAgent):
@@ -23,7 +23,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         #                                        lr=self.config.learning_rate)
 
         # Define loss
-        #self.loss = chamfer.chamferDist()
+        self.loss = chamfer.chamferDist()
 
         # Initialize counter
         self.current_epoch = 0

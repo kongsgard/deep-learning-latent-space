@@ -14,8 +14,6 @@ def main():
         help='The Configuration file in json format')
     args = parser.parse_args()
 
-    print(args.config)
-
     # Parse the config json file
     config = process_config(args.config)
 
