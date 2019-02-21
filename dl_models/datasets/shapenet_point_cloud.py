@@ -22,6 +22,8 @@ class ShapeNetPointCloudDataset(data.Dataset):
         self.num_gt_points = config.num_gt_points
         self.dataset_mode = dataset_mode
 
+        print(self.data_folder + self.dataset_mode + '.lmdb')
+
         self.df = dataflow.LMDBSerializer.load(self.data_folder + self.dataset_mode + '.lmdb', shuffle=False)
 
     def __getitem__(self, index):

@@ -137,10 +137,10 @@ class ThreeDimensionalGANAgent(BaseAgent):
             fake_labels = torch.zeros(self.config.batch_size).view(-1, 1, 1, 1, 1)
 
             if self.cuda:
-                x = x.cuda(async=self.config.async_loading)
-                z = z.cuda(async=self.config.async_loading)
-                real_labels = real_labels.cuda(async=self.config.async_loading)
-                fake_labels = fake_labels.cuda(async=self.config.async_loading)
+                x = x.cuda(non_blocking=self.config.async_loading)
+                z = z.cuda(non_blocking=self.config.async_loading)
+                real_labels = real_labels.cuda(non_blocking=self.config.async_loading)
+                fake_labels = fake_labels.cuda(non_blocking=self.config.async_loading)
 
             if x.size()[0] != int(self.config.batch_size):
                 # print("Batch_size != {} - dropping last incompatible batch".format(int(self.config.batch_size)))
@@ -170,7 +170,7 @@ class ThreeDimensionalGANAgent(BaseAgent):
             # === Train the generator ===#
             z = generate_fake_noise(self.config)
             if self.cuda:
-                z = z.cuda(async=self.config.async_loading)
+                z = z.cuda(non_blocking=self.config.async_loading)
 
             g_fake_out = self.g_net(z)
             d_fake_out = self.d_net(g_fake_out)
