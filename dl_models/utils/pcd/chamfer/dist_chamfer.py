@@ -8,6 +8,7 @@ from collections import Set, Mapping, deque
 import chamfer
 
 
+# Chamfer's distance module @thibaultgroueix
 # GPU tensors only
 class chamferFunction(Function):
     @staticmethod

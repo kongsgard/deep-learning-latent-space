@@ -5,16 +5,18 @@ from agents import *
 
 
 def main():
-    # parse the path of the json config file
-    arg_parser = argparse.ArgumentParser(description="")
-    arg_parser.add_argument(
+    # Parse the path of the json config file
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
         'config',
         metavar='config_json_file',
         default='None',
         help='The Configuration file in json format')
-    args = arg_parser.parse_args()
+    args = parser.parse_args()
 
-    # parse the config json file
+    print(args.config)
+
+    # Parse the config json file
     config = process_config(args.config)
 
     # Create the Agent and pass all the configuration for then to run it
