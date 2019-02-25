@@ -13,6 +13,10 @@
   "num_input_points": 2048,
   "num_gt_points": 16384,
 
+  "num_coarse": 1024,
+  "grid_size": 4,
+  "grid_scale": 0.05,
+
   "learning_rate": 0.0001,
   "lr_decay": 0.7,
 
