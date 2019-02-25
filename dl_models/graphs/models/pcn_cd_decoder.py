@@ -47,13 +47,15 @@ class PCNDecoder(nn.Module):
         global_features = global_features.repeat(1, self.num_fine, 1) # [32, 16384, 1024]
 
         features = torch.cat((grid_features, point_features, global_features), 2) # [32, 16384, 1029]
-        features = features.transpose(2, 1) # [32, 1029, 16384]
-
+        
         center = coarse.view(-1, coarse.shape[1], 1, 3)
         center = center.repeat(1, 1, self.config.grid_size ** 2, 1)
         center = center.view(-1, self.num_fine, 3) # [32, 16384, 3]
+        
+        # The Conv1d operator requires an input with shape (N, C_in, L_in) which necessitates a transpose of the input_points
+        # Perform the inverse transpose of the network output
+        features = features.transpose(2, 1) # [32, 1029, 16384]
         center = center.transpose(2, 1) # [32, 3, 16384]
-
         fine = self.fine_layer(features) + center # [32, 3, 16384]
         return coarse, fine.transpose(2, 1)
 
