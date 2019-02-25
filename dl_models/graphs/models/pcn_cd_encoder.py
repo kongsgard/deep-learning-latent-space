@@ -22,6 +22,9 @@ class PCNEncoder(nn.Module):
             ) # TODO: Add second layer
 
     def forward(self, x):
+        # The Conv1d operator requires an input with shape (N, C_in, L_in) which necessitates a transpose of the input_points
+        # Perform the inverse transpose of the network output
+        x = x.transpose(2, 1)
         x = self.layer1(x) # [32, 256, 2048]
 
         x_global = torch.max(x, 2, keepdim=True)[0] # [32, 256, 1]
@@ -39,7 +42,6 @@ if __name__ == '__main__':
     config = edict(config)
     
     input_points = torch.autograd.Variable(torch.randn(32, 2048, 3))
-    input_points = input_points.transpose(2, 1)
     network = PCNEncoder(config) 
     out = network(input_points)
-    print(out)
+    print(out.shape)
