@@ -19,26 +19,17 @@ class PCNEncoder(nn.Module):
         self.layer2 = nn.Sequential(
                 nn.Conv1d(512, 1024, kernel_size=1),
                 nn.ReLU(),
-            )
+            ) # TODO: Add second layer
 
     def forward(self, x):
-        x = self.layer1(x)
-        print("layer1_out:", x.shape) # TODO: Remove
-        
-        x_global = torch.max(x, 2, keepdim=True)[0]
-        print("x_global:", x_global.shape) # TODO: Remove
-        
-        x_global_repeated = x_global.repeat(1, 1, x.shape[2])
-        print("x_global_repeated:", x_global_repeated.shape)
-        
-        x = torch.cat((x, x_global_repeated), 1)
-        print("x_concatenated", x.shape) # TODO: Remove
-        
-        x = self.layer2(x)
-        print("layer2_out:", x.shape) # TODO: Remove
-        
-        x = torch.max(x, 2)[0]
-        print("out:", x.shape)
+        x = self.layer1(x) # [32, 256, 2048]
+
+        x_global = torch.max(x, 2, keepdim=True)[0] # [32, 256, 1]
+        x_global_repeated = x_global.repeat(1, 1, x.shape[2]) # [32, 256, 2048]
+
+        x = torch.cat((x, x_global_repeated), 1) # [32, 512, 2048] 
+        x = self.layer2(x) # [32, 1024, 2048]
+        x = torch.max(x, 2)[0] # [32, 1024]
         return x
 
 
@@ -49,6 +40,6 @@ if __name__ == '__main__':
     
     input_points = torch.autograd.Variable(torch.randn(32, 2048, 3))
     input_points = input_points.transpose(2, 1)
-    print("input shape:", input_points.shape)
     network = PCNEncoder(config) 
     out = network(input_points)
+    print(out)
