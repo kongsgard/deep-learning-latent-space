@@ -17,9 +17,11 @@ class PCNEncoder(nn.Module):
             )
 
         self.layer2 = nn.Sequential(
+                nn.Conv1d(512, 512, kernel_size=1),
+                nn.ReLU(),
                 nn.Conv1d(512, 1024, kernel_size=1),
                 nn.ReLU(),
-            ) # TODO: Add second layer
+            )
 
     def forward(self, x):
         # The Conv1d operator requires an input with shape (N, C_in, L_in) which necessitates a transpose of the input_points
