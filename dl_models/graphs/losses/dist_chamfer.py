@@ -8,9 +8,9 @@ from collections import Set, Mapping, deque
 import chamfer
 
 
-# Chamfer's distance module @thibaultgroueix
+# Chamfer's distance module
 # GPU tensors only
-class chamferFunction(Function):
+class ChamferFunction(Function):
     @staticmethod
     def forward(ctx, xyz1, xyz2):
         batchsize, n, _ = xyz1.size()
@@ -45,10 +45,10 @@ class chamferFunction(Function):
         chamfer.backward(xyz1, xyz2, gradxyz1, gradxyz2, graddist1, graddist2, idx1, idx2)
         return gradxyz1, gradxyz2
 
-class chamferDist(nn.Module):
+class ChamferDist(nn.Module):
     def __init__(self):
-        super(chamferDist, self).__init__()
+        super(ChamferDist, self).__init__()
 
     def forward(self, input1, input2):
-        return chamferFunction.apply(input1, input2)
+        return ChamferFunction.apply(input1, input2)
 

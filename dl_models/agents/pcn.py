@@ -4,8 +4,9 @@ from tensorboardX import SummaryWriter
 import torch
 
 from agents.base import BaseAgent
+from graphs.losses.dist_chamfer import ChamferDist
+# from graphs.models.autoencoder import Autoencoder
 from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
-import utils.pcd.dist_chamfer as chamfer
 from utils.misc import print_cuda_statistics
 
 class PointCompletionNetworkAgent(BaseAgent):
@@ -13,17 +14,18 @@ class PointCompletionNetworkAgent(BaseAgent):
         super().__init__(config)
 
         # Define model
-
+        # self.autoencoder = Autoencoder(self.config)
 
         # Define dataloader
-        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, dataset_mode='train')
+        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
+                                                             dataset_mode='train')
 
         # Define optimizer
-        #self.optimizer = torch.optim.Adam(self.network.parameters(),
-        #                                        lr=self.config.learning_rate)
+        #self.optimizer = torch.optim.Adam(self.autoencoder.parameters(),
+        #                                    lr=self.config.learning_rate)
 
-        # Define loss
-        self.loss = chamfer.chamferDist()
+        # Define criterion
+        self.criterion = ChamferDist()
 
         # Initialize counter
         self.current_epoch = 0
@@ -48,13 +50,27 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.logger.info("Program will run on ***CPU***")
 
         # Send the models and loss to the device used
+        self.autoencoder = self.autoencoder.to(self.device)
+        self.criterion = self.criterion.to(self.device)
 
-        # Load model from the latest checkpoint. If none can be found, start from scratch.
+        # Load model from the latest checkpoint.
+        # If none can be found, start from scratch.
         self.load_checkpoint(self.config.checkpoint_file)
 
         # Summary Writer
         self.summary_writer = SummaryWriter(log_dir=self.config.summary_dir,
-                                                      comment='PCN')
+                                            comment='PCN')
+
+    def update_loss(self, gt_points):
+        # TODO: Add summaries
+        alpha = 0.1 # TODO: Update
+
+        loss_coarse = self.criterion(self.coarse, gt_points)
+
+        loss_fine = self.criterion(self.fine, gt_points)
+
+        loss = loss_coarse + alpha * loss_fine
+        return loss
 
     def load_checkpoint(self, file_name):
         filename = self.config.checkpoint_dir + file_name
@@ -99,7 +115,8 @@ class PointCompletionNetworkAgent(BaseAgent):
 
     def train_one_epoch(self):
         # Initialize tqdm batch
-        tqdm_batch = tqdm(self.train_dataloader.loader, total=self.train_dataloader.num_iterations,
+        tqdm_batch = tqdm(self.train_dataloader.loader,
+                          total=self.train_dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
 
         for curr_it, x in enumerate(tqdm_batch):
