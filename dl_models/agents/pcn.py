@@ -7,6 +7,7 @@ from agents.base import BaseAgent
 from graphs.losses.dist_chamfer import ChamferDist
 from graphs.models.pcn import PCN
 from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
+from utils.metrics import AverageMeter
 from utils.misc import print_cuda_statistics
 
 class PointCompletionNetworkAgent(BaseAgent):
@@ -119,9 +120,20 @@ class PointCompletionNetworkAgent(BaseAgent):
                           total=self.train_dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
 
+        model_loss_epoch = AverageMeter()
+
         for curr_it, x in enumerate(tqdm_batch):
             ids, input_points, gt_points = x
-            break # TODO: Remove
+            
+            if self.cuda:
+                input_points = input_points.cuda(non_blocking=self.config.async_loading)
+                gt_points = gt_points.cuda(non_blocking=self.config.async_loading)
+
+            if input_points.size()[0] != int(self.config.batch_size):
+                # print("Batch_size != {} - dropping last incompatible batch".format(int(self.config.batch_size)))
+                continue
+
+            #break # TODO: Remove
 
     def validate(self):
         pass
