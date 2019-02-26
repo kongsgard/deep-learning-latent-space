@@ -99,7 +99,7 @@ if __name__ == '__main__':
     config = edict(config)
     
     input_points = torch.autograd.Variable(torch.randn(32, 2048, 3))
-    network = PCN(config) 
+    network = PCN(config)
     coarse, fine = network(input_points)
     print(coarse.shape)
     print(fine.shape)

@@ -62,16 +62,17 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.summary_writer = SummaryWriter(log_dir=self.config.summary_dir,
                                             comment='PCN')
 
-    def update_loss(self, gt_points):
+    def update_loss(self, coarse, fine, gt_points):
         # TODO: Add summaries
         alpha = 0.1 # TODO: Update
 
-        loss_coarse = self.criterion(self.coarse, gt_points)
+        loss_coarse = self.criterion(coarse, gt_points)
 
-        loss_fine = self.criterion(self.fine, gt_points)
+        loss_fine = self.criterion(fine, gt_points)
 
         loss = loss_coarse + alpha * loss_fine
-        return loss
+
+        return loss, loss_coarse, loss_fine
 
     def load_checkpoint(self, file_name):
         filename = self.config.checkpoint_dir + file_name
@@ -121,6 +122,8 @@ class PointCompletionNetworkAgent(BaseAgent):
                           desc="epoch-{}-".format(self.current_epoch))
 
         model_loss_epoch = AverageMeter()
+        loss_coarse_epoch = AverageMeter()
+        loss_fine_epoch = AverageMeter()
 
         for curr_it, x in enumerate(tqdm_batch):
             ids, input_points, gt_points = x
@@ -133,7 +136,24 @@ class PointCompletionNetworkAgent(BaseAgent):
                 # print("Batch_size != {} - dropping last incompatible batch".format(int(self.config.batch_size)))
                 continue
 
+            coarse, fine = self.model(input_points)
+
+            loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
+
+            # Update and log the current loss
+            model_loss_epoch.update(loss.item())
+            loss_coarse_epoch.update(loss_coarse.item())
+            loss_fine_epoch.update(loss_fine.item())
+
+            self.current_iteration += 1
+
             #break # TODO: Remove
+
+        tqdm_batch.close()
+
+        self.logger.info("Training at epoch-{:d} | Network loss: {:.3f}"
+                         .format(self.current_epoch, model_loss_epoch.val))
+        self.generator_summary_writer.add_scalar("epoch/loss", model_loss_epoch.val, self.current_epoch)
 
     def validate(self):
         pass
