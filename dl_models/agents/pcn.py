@@ -5,7 +5,7 @@ import torch
 
 from agents.base import BaseAgent
 from graphs.losses.dist_chamfer import ChamferDist
-# from graphs.models.autoencoder import Autoencoder
+from graphs.models.pcn import PCN
 from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
 from utils.misc import print_cuda_statistics
 
@@ -14,15 +14,15 @@ class PointCompletionNetworkAgent(BaseAgent):
         super().__init__(config)
 
         # Define model
-        # self.autoencoder = Autoencoder(self.config)
+        self.model = PCN(self.config)
 
         # Define dataloader
         self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
                                                              dataset_mode='train')
 
         # Define optimizer
-        #self.optimizer = torch.optim.Adam(self.autoencoder.parameters(),
-        #                                    lr=self.config.learning_rate)
+        self.optimizer = torch.optim.Adam(self.model.parameters(),
+                                          lr=self.config.learning_rate)
 
         # Define criterion
         self.criterion = ChamferDist()
@@ -50,7 +50,7 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.logger.info("Program will run on ***CPU***")
 
         # Send the models and loss to the device used
-        self.autoencoder = self.autoencoder.to(self.device)
+        self.model = self.model.to(self.device)
         self.criterion = self.criterion.to(self.device)
 
         # Load model from the latest checkpoint.
