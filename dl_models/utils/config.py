@@ -43,7 +43,7 @@ def get_config_from_json(json_file):
     :return: config(namespace), config(dictionary)
     """
 
-    # parse the configurations from the config json file provided
+    # Parse the configurations from the config json file provided
     with open(json_file, 'r') as config_file:
         try:
             config_dict = json.load(config_file)
@@ -67,26 +67,26 @@ def process_config(json_file):
     :return: config object(namespace)
     """
     config, _ = get_config_from_json(json_file)
-    print(" THE Configuration of your experiment ..")
-    pprint(config)
+    # print(" The configuration of your experiment ...")
+    # pprint(config)
 
-    # making sure that you have provided the exp_name.
+    # Make sure that you have provided the exp_name
     try:
         print(" *************************************** ")
         print("The experiment name is {}".format(config.exp_name))
         print(" *************************************** ")
     except AttributeError:
-        print("ERROR!!..Please provide the exp_name in json file..")
+        print("ERROR! Please provide the exp_name in json file.")
         exit(-1)
 
-    # create some important directories to be used for that experiment.
+    # Create some important directories to be used for the experiment
     config.summary_dir = os.path.join("experiments", config.exp_name, "summaries/")
     config.checkpoint_dir = os.path.join("experiments", config.exp_name, "checkpoints/")
     config.out_dir = os.path.join("experiments", config.exp_name, "out/")
     config.log_dir = os.path.join("experiments", config.exp_name, "logs/")
     create_dirs([config.summary_dir, config.checkpoint_dir, config.out_dir, config.log_dir])
 
-    # setup logging in the project
+    # Setup logging in the project
     setup_logging(config.log_dir)
 
     logging.getLogger().info("The project pipeline will begin")
