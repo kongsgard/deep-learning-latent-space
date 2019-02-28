@@ -131,6 +131,7 @@ class PointCompletionNetworkAgent(BaseAgent):
 
         for curr_it, x in enumerate(tqdm_batch):
             ids, input_points, gt_points = x
+            self.optimizer.zero_grad()
             
             if self.cuda:
                 input_points = input_points.cuda(non_blocking=self.config.async_loading)
@@ -143,11 +144,13 @@ class PointCompletionNetworkAgent(BaseAgent):
             coarse, fine = self.model(input_points)
 
             loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
+            loss.backward()
+            self.optimizer.step()
 
             # Update and log the current loss
             model_loss_epoch.update(loss.item())
-            loss_coarse_epoch.update(loss_coarse.item())
-            loss_fine_epoch.update(loss_fine.item())
+            #loss_coarse_epoch.update(loss_coarse.item())
+            #loss_fine_epoch.update(loss_fine.item())
 
             self.current_iteration += 1
 
