@@ -1,29 +1,33 @@
-from tqdm import tqdm
-
 from tensorboardX import SummaryWriter
 import torch
+from tqdm import tqdm
+import visdom
 
 from agents.base import BaseAgent
+from graphs.losses.dist_chamfer import ChamferDist
+from graphs.models.pcn import PCN
 from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
-import utils.pcd.dist_chamfer as chamfer
+from utils.metrics import AverageMeter
 from utils.misc import print_cuda_statistics
+from utils.pcd.pcd_utils import plot_completion_results
 
 class PointCompletionNetworkAgent(BaseAgent):
     def __init__(self, config):
         super().__init__(config)
 
         # Define model
-
+        self.model = PCN(self.config)
 
         # Define dataloader
-        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, dataset_mode='train')
+        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
+                                                             dataset_mode='train')
 
         # Define optimizer
-        #self.optimizer = torch.optim.Adam(self.network.parameters(),
-        #                                        lr=self.config.learning_rate)
+        self.optimizer = torch.optim.Adam(self.model.parameters(),
+                                          lr=self.config.learning_rate)
 
-        # Define loss
-        self.loss = chamfer.chamferDist()
+        # Define criterion
+        self.criterion = ChamferDist()
 
         # Initialize counter
         self.current_epoch = 0
@@ -48,13 +52,35 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.logger.info("Program will run on ***CPU***")
 
         # Send the models and loss to the device used
+        self.model = self.model.to(self.device)
+        self.criterion = self.criterion.to(self.device)
 
-        # Load model from the latest checkpoint. If none can be found, start from scratch.
+        # Load model from the latest checkpoint.
+        # If none can be found, start from scratch.
         self.load_checkpoint(self.config.checkpoint_file)
+
+        # Visualization in visdom during training
+        self.vis = visdom.Visdom()
 
         # Summary Writer
         self.summary_writer = SummaryWriter(log_dir=self.config.summary_dir,
-                                                      comment='PCN')
+                                            comment='PCN')
+
+    def update_loss(self, coarse, fine, gt_points):
+        # TODO: Add summaries
+
+        device = "cuda" if self.config.cuda else "cpu"
+        alpha = torch.tensor(0.01, device=device) # TODO: Should increase on some thresholds based on global step
+
+        dist1, dist2 = self.criterion(coarse, gt_points)
+        loss_coarse = (torch.mean(dist1)) + (torch.mean(dist2))
+
+        dist1, dist2 = self.criterion(fine, gt_points)
+        loss_fine = (torch.mean(dist1)) + (torch.mean(dist2))
+
+        loss = loss_coarse + alpha * loss_fine
+
+        return loss, loss_coarse, loss_fine
 
     def load_checkpoint(self, file_name):
         filename = self.config.checkpoint_dir + file_name
@@ -99,12 +125,55 @@ class PointCompletionNetworkAgent(BaseAgent):
 
     def train_one_epoch(self):
         # Initialize tqdm batch
-        tqdm_batch = tqdm(self.train_dataloader.loader, total=self.train_dataloader.num_iterations,
+        tqdm_batch = tqdm(self.train_dataloader.loader,
+                          total=self.train_dataloader.num_iterations,
                           desc="epoch-{}-".format(self.current_epoch))
+
+        model_loss_epoch = AverageMeter()
+        loss_coarse_epoch = AverageMeter()
+        loss_fine_epoch = AverageMeter()
 
         for curr_it, x in enumerate(tqdm_batch):
             ids, input_points, gt_points = x
-            break # TODO: Remove
+
+            self.optimizer.zero_grad()
+            
+            if self.cuda:
+                input_points = input_points.cuda(non_blocking=self.config.async_loading)
+                gt_points = gt_points.cuda(non_blocking=self.config.async_loading)
+
+            if input_points.size()[0] != int(self.config.batch_size):
+                # print("Batch_size != {} - dropping last incompatible batch".format(int(self.config.batch_size)))
+                continue
+
+            coarse, fine = self.model(input_points)
+
+            loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
+            loss.backward()
+            self.optimizer.step()
+
+            # Update and log the current loss
+            model_loss_epoch.update(loss.item())
+            #loss_coarse_epoch.update(loss_coarse.item())
+            #loss_fine_epoch.update(loss_fine.item())
+
+            self.current_iteration += 1
+
+            # Visualize
+            if self.config.visualize and curr_it % 10 == 0:
+                plot_completion_results(self.vis,
+                                        input_points.contiguous()[0].data.cpu(),
+                                        coarse.contiguous()[0].data.cpu(),
+                                        fine.contiguous()[0].data.cpu(),
+                                        gt_points[0].data.cpu()
+                                        )
+            #break # TODO: Remove
+
+        tqdm_batch.close()
+
+        self.logger.info("Training at epoch-{:d} | Network loss: {:.3f}"
+                         .format(self.current_epoch, model_loss_epoch.val))
+        self.generator_summary_writer.add_scalar("epoch/loss", model_loss_epoch.val, self.current_epoch)
 
     def validate(self):
         pass
