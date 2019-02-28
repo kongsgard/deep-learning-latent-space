@@ -9,6 +9,7 @@ class PCN(nn.Module):
         super(PCN, self).__init__()
         self.config = config
         self.num_fine = self.config.grid_size ** 2 * self.config.num_coarse
+        self.device = "cuda" if self.config.cuda else "cpu"
 
         self.encoder_layer1 = nn.Sequential(
                 nn.Conv1d(3, 128, kernel_size=1),
@@ -66,6 +67,7 @@ class PCN(nn.Module):
         ]) # TODO: Might flip axes according to reference
         grid_features = torch.reshape(torch.stack(grid_features, dim=2), (-1, 2)).expand(1, -1, -1) # TODO: Change .expand to .view?
         grid_features = grid_features.repeat(x.shape[0], self.config.num_coarse, 1) # [32, 16384, 2]
+        grid_features = grid_features.to(self.device)
 
         point_features = coarse.view(-1, coarse.shape[1], 1, 3)
         point_features = point_features.repeat(1, 1, self.config.grid_size ** 2, 1)
@@ -97,9 +99,10 @@ if __name__ == '__main__':
     """Network Test"""
     config = json.load(open('../../configs/pcn.json'))
     config = edict(config)
-    
-    input_points = torch.autograd.Variable(torch.randn(32, 2048, 3))
-    network = PCN(config)
+
+    input_points = torch.autograd.Variable(torch.randn(12, 2048, 3)).cuda()
+
+    network = PCN(config).cuda()
     coarse, fine = network(input_points)
     print(coarse.shape)
     print(fine.shape)
