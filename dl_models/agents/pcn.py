@@ -9,6 +9,7 @@ from graphs.models.pcn import PCN
 from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
 from utils.metrics import AverageMeter
 from utils.misc import print_cuda_statistics
+from utils.pcd.pcd_utils import plot_completion_results
 
 class PointCompletionNetworkAgent(BaseAgent):
     def __init__(self, config):
@@ -159,35 +160,13 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.current_iteration += 1
 
             # Visualize
-            if curr_it % 10 == 0:
-                self.vis.scatter(X=input_points.contiguous()[0].data.cpu(),
-                    win='ipnut',
-                    opts=dict(
-                        title="Input Points",
-                        markersize=2,
-                    )
-                )
-                self.vis.scatter(X=coarse.contiguous()[0].data.cpu(),
-                    win='coarse',
-                    opts=dict(
-                        title="Coarse Shape Completion",
-                        markersize=2,
-                    )
-                )
-                self.vis.scatter(X=fine.contiguous()[0].data.cpu(),
-                    win='fine',
-                    opts=dict(
-                        title="Fine Shape Completion",
-                        markersize=2,
-                    )
-                )
-                self.vis.scatter(X=gt_points[0].data.cpu(),
-                    win='ground_truth',
-                    opts=dict(
-                        title="Ground Truth",
-                        markersize=2,
-                    )
-                )
+            if self.config.visualize and curr_it % 10 == 0:
+                plot_completion_results(self.vis,
+                                        input_points.contiguous()[0].data.cpu(),
+                                        coarse.contiguous()[0].data.cpu(),
+                                        fine.contiguous()[0].data.cpu(),
+                                        gt_points[0].data.cpu()
+                                        )
             #break # TODO: Remove
 
         tqdm_batch.close()

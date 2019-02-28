@@ -1,7 +1,38 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import open3d
+import visdom
 
+
+def plot_completion_results(vis, input_points, coarse, fine, gt_points):
+    vis.scatter(X=input_points,
+                win='input',
+                opts=dict(
+                    title="Input",
+                    markersize=2,
+                )
+            )
+    vis.scatter(X=coarse,
+        win='coarse',
+        opts=dict(
+            title="Coarse Shape Completion",
+            markersize=2,
+        )
+    )
+    vis.scatter(X=fine,
+        win='fine',
+        opts=dict(
+            title="Fine Shape Completion",
+            markersize=2,
+        )
+    )
+    vis.scatter(X=gt_points,
+        win='ground_truth',
+        opts=dict(
+            title="Ground Truth",
+            markersize=2,
+        )
+    )
 
 def read_pcd(filename):
     pcd = open3d.read_point_cloud(filename)
