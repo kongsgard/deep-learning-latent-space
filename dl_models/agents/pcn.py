@@ -64,11 +64,15 @@ class PointCompletionNetworkAgent(BaseAgent):
 
     def update_loss(self, coarse, fine, gt_points):
         # TODO: Add summaries
-        alpha = 0.1 # TODO: Update
 
-        loss_coarse = self.criterion(coarse, gt_points)
+        device = "cuda" if self.config.cuda else "cpu"
+        alpha = torch.tensor(0.01, device=device) # TODO: Should increase on some thresholds based on global step
 
-        loss_fine = self.criterion(fine, gt_points)
+        dist1, dist2 = self.criterion(coarse, gt_points)
+        loss_coarse = (torch.mean(dist1)) + (torch.mean(dist2))
+
+        dist1, dist2 = self.criterion(fine, gt_points)
+        loss_fine = (torch.mean(dist1)) + (torch.mean(dist2))
 
         loss = loss_coarse + alpha * loss_fine
 
