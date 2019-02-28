@@ -1,7 +1,7 @@
-from tqdm import tqdm
-
 from tensorboardX import SummaryWriter
 import torch
+from tqdm import tqdm
+import visdom
 
 from agents.base import BaseAgent
 from graphs.losses.dist_chamfer import ChamferDist
@@ -57,6 +57,9 @@ class PointCompletionNetworkAgent(BaseAgent):
         # Load model from the latest checkpoint.
         # If none can be found, start from scratch.
         self.load_checkpoint(self.config.checkpoint_file)
+
+        # Visualization in visdom during training
+        self.vis = visdom.Visdom()
 
         # Summary Writer
         self.summary_writer = SummaryWriter(log_dir=self.config.summary_dir,
@@ -131,6 +134,7 @@ class PointCompletionNetworkAgent(BaseAgent):
 
         for curr_it, x in enumerate(tqdm_batch):
             ids, input_points, gt_points = x
+
             self.optimizer.zero_grad()
             
             if self.cuda:
@@ -154,6 +158,36 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             self.current_iteration += 1
 
+            # Visualize
+            if curr_it % 10 == 0:
+                self.vis.scatter(X=input_points.contiguous()[0].data.cpu(),
+                    win='ipnut',
+                    opts=dict(
+                        title="Input Points",
+                        markersize=2,
+                    )
+                )
+                self.vis.scatter(X=coarse.contiguous()[0].data.cpu(),
+                    win='coarse',
+                    opts=dict(
+                        title="Coarse Shape Completion",
+                        markersize=2,
+                    )
+                )
+                self.vis.scatter(X=fine.contiguous()[0].data.cpu(),
+                    win='fine',
+                    opts=dict(
+                        title="Fine Shape Completion",
+                        markersize=2,
+                    )
+                )
+                self.vis.scatter(X=gt_points[0].data.cpu(),
+                    win='ground_truth',
+                    opts=dict(
+                        title="Ground Truth",
+                        markersize=2,
+                    )
+                )
             #break # TODO: Remove
 
         tqdm_batch.close()
