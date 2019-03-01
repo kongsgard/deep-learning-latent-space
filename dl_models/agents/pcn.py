@@ -22,9 +22,11 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
                                                              dataset_mode='train')
 
-        # Define optimizer
+        # Define optimizer and scheduler
         self.optimizer = torch.optim.Adam(self.model.parameters(),
-                                          lr=self.config.learning_rate)
+                                          lr=self.config.learning_rate,
+                                          weight_decay=self.config.weight_decay)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.993)
 
         # Define criterion
         self.criterion = ChamferDist()
@@ -69,8 +71,12 @@ class PointCompletionNetworkAgent(BaseAgent):
     def update_loss(self, coarse, fine, gt_points):
         # TODO: Add summaries
 
-        device = "cuda" if self.config.cuda else "cpu"
-        alpha = torch.tensor(0.01, device=device) # TODO: Should increase on some thresholds based on global step
+        if self.current_epoch >= 10:
+            self.config.alpha = 0.1
+        elif self.current_epoch >= 20:
+            self.config.alpha = 0.5
+        elif self.current_epoch >= 50:
+            self.config.alpha = 1.0
 
         dist1, dist2 = self.criterion(coarse, gt_points)
         loss_coarse = (torch.mean(dist1)) + (torch.mean(dist2))
@@ -78,7 +84,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         dist1, dist2 = self.criterion(fine, gt_points)
         loss_fine = (torch.mean(dist1)) + (torch.mean(dist2))
 
-        loss = loss_coarse + alpha * loss_fine
+        loss = loss_coarse + self.config.alpha * loss_fine
 
         return loss, loss_coarse, loss_fine
 
@@ -119,7 +125,9 @@ class PointCompletionNetworkAgent(BaseAgent):
     def train(self):
         for epoch in range(self.current_epoch, self.config.max_epoch):
             self.current_epoch = epoch
+            self.scheduler.step()
             self.train_one_epoch()
+            # TODO: self.validate_one_epoch()
             self.save_checkpoint()
             break # TODO: Remove
 
@@ -173,7 +181,7 @@ class PointCompletionNetworkAgent(BaseAgent):
 
         self.logger.info("Training at epoch-{:d} | Network loss: {:.3f}"
                          .format(self.current_epoch, model_loss_epoch.val))
-        self.generator_summary_writer.add_scalar("epoch/loss", model_loss_epoch.val, self.current_epoch)
+        self.summary_writer.add_scalar("epoch/loss", model_loss_epoch.val, self.current_epoch)
 
     def validate(self):
         pass
