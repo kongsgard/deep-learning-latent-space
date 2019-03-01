@@ -22,9 +22,10 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
                                                              dataset_mode='train')
 
-        # Define optimizer
+        # Define optimizer and scheduler
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=self.config.learning_rate)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.993)
 
         # Define criterion
         self.criterion = ChamferDist()
@@ -119,7 +120,9 @@ class PointCompletionNetworkAgent(BaseAgent):
     def train(self):
         for epoch in range(self.current_epoch, self.config.max_epoch):
             self.current_epoch = epoch
+            self.scheduler.step()
             self.train_one_epoch()
+            # TODO: self.validate_one_epoch()
             self.save_checkpoint()
             break # TODO: Remove
 
@@ -173,7 +176,7 @@ class PointCompletionNetworkAgent(BaseAgent):
 
         self.logger.info("Training at epoch-{:d} | Network loss: {:.3f}"
                          .format(self.current_epoch, model_loss_epoch.val))
-        self.generator_summary_writer.add_scalar("epoch/loss", model_loss_epoch.val, self.current_epoch)
+        self.summary_writer.add_scalar("epoch/loss", model_loss_epoch.val, self.current_epoch)
 
     def validate(self):
         pass
