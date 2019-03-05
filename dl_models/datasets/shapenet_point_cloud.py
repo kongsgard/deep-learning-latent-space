@@ -25,6 +25,10 @@ class ShapeNetPointCloudDataset(data.Dataset):
         print(self.data_folder + self.dataset_mode + '.lmdb')
 
         self.df = dataflow.LMDBSerializer.load(self.data_folder + self.dataset_mode + '.lmdb', shuffle=False)
+        if config.mode == "train":
+            self.df = dataflow.LocallyShuffleData(self.df, buffer_size=2000)
+        self.df = dataflow.PrefetchData(self.df, nr_prefetch=500, nr_proc=1)
+        self.df.reset_state()
 
     def __getitem__(self, index):
         ids, input_points, gt_points = next(self.df.get_data())
