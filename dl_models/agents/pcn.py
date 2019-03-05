@@ -11,6 +11,7 @@ from utils.metrics import AverageMeter
 from utils.misc import print_cuda_statistics
 from utils.pcd.pcd_utils import plot_completion_results
 
+
 class PointCompletionNetworkAgent(BaseAgent):
     def __init__(self, config):
         super().__init__(config)
@@ -26,7 +27,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=self.config.learning_rate,
                                           weight_decay=self.config.weight_decay)
-        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.993)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.97)
 
         # Define criterion
         self.criterion = ChamferDist()
@@ -71,6 +72,8 @@ class PointCompletionNetworkAgent(BaseAgent):
     def update_loss(self, coarse, fine, gt_points):
         # TODO: Add summaries
 
+        gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
+
         if self.current_epoch >= 10:
             self.config.alpha = 0.1
         elif self.current_epoch >= 20:
@@ -78,7 +81,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         elif self.current_epoch >= 50:
             self.config.alpha = 1.0
 
-        dist1, dist2 = self.criterion(coarse, gt_points)
+        dist1, dist2 = self.criterion(coarse, gt_downsampled)
         loss_coarse = (torch.mean(dist1)) + (torch.mean(dist2))
 
         dist1, dist2 = self.criterion(fine, gt_points)
@@ -129,7 +132,6 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.train_one_epoch()
             # TODO: self.validate_one_epoch()
             self.save_checkpoint()
-            break # TODO: Remove
 
     def train_one_epoch(self):
         # Initialize tqdm batch
@@ -167,15 +169,17 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             self.current_iteration += 1
 
+            self.summary_writer.add_scalar("iteration/loss", loss.item(), self.current_iteration)
+
             # Visualize
             if self.config.visualize and curr_it % 10 == 0:
+                gt_points = gt_points[:, :coarse.shape[1], :]
                 plot_completion_results(self.vis,
                                         input_points.contiguous()[0].data.cpu(),
                                         coarse.contiguous()[0].data.cpu(),
                                         fine.contiguous()[0].data.cpu(),
                                         gt_points[0].data.cpu()
                                         )
-            #break # TODO: Remove
 
         tqdm_batch.close()
 
