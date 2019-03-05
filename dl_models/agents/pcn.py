@@ -85,7 +85,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         loss_coarse = (torch.mean(dist1)) + (torch.mean(dist2))
 
         dist1, dist2 = self.criterion(fine, gt_points)
-        loss_fine = (torch.mean(dist1)) + (torch.mean(dist2))
+        loss_fine = (torch.mean(torch.sqrt(dist1))) + (torch.mean(torch.sqrt(dist2)))
 
         loss = loss_coarse + self.config.alpha * loss_fine
 
