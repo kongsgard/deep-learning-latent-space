@@ -72,7 +72,7 @@ class PointCompletionNetworkAgent(BaseAgent):
     def update_loss(self, coarse, fine, gt_points):
         # TODO: Add summaries
 
-        gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
+        #gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
 
         if self.current_epoch >= 10:
             self.config.alpha = 0.1
@@ -82,7 +82,7 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.config.alpha = 1.0
 
         dist1, dist2 = self.criterion(coarse, gt_downsampled)
-        loss_coarse = (torch.mean(dist1)) + (torch.mean(dist2))
+        loss_coarse = (torch.mean(torch.sqrt(dist1))) + (torch.mean(torch.sqrt(dist2)))
 
         dist1, dist2 = self.criterion(fine, gt_points)
         loss_fine = (torch.mean(torch.sqrt(dist1))) + (torch.mean(torch.sqrt(dist2)))
@@ -177,7 +177,6 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             # Visualize
             if self.config.visualize and curr_it % 10 == 0:
-                gt_points = gt_points[:, :coarse.shape[1], :]
                 plot_completion_results(self.vis,
                                         input_points.contiguous()[0].data.cpu(),
                                         coarse.contiguous()[0].data.cpu(),
