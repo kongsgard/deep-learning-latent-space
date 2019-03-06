@@ -99,6 +99,8 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             self.current_epoch = checkpoint['epoch']
             self.current_iteration = checkpoint['iteration']
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
             self.logger.info("Checkpoint loaded successfully from '{}' at (epoch {}) at (iteration {})\n"
                              .format(self.config.checkpoint_dir, checkpoint['epoch'], checkpoint['iteration']))
@@ -110,6 +112,8 @@ class PointCompletionNetworkAgent(BaseAgent):
         state = {
             'epoch': self.current_epoch,
             'iteration': self.current_iteration,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
         }
         torch.save(state, self.config.checkpoint_dir + file_name)
 
