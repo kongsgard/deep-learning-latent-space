@@ -22,6 +22,8 @@ class PointCompletionNetworkAgent(BaseAgent):
         # Define dataloader
         self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
                                                              dataset_mode='train')
+        self.validate_dataloader = ShapeNetPointCloudDataLoader(self.config,
+                                                                dataset_mode='valid')
 
         # Define optimizer and scheduler
         self.optimizer = torch.optim.Adam(self.model.parameters(),
@@ -72,7 +74,7 @@ class PointCompletionNetworkAgent(BaseAgent):
     def update_loss(self, coarse, fine, gt_points):
         # TODO: Add summaries
 
-        gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
+        #gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
 
         if self.current_epoch >= 10:
             self.config.alpha = 0.1
@@ -81,8 +83,8 @@ class PointCompletionNetworkAgent(BaseAgent):
         elif self.current_epoch >= 50:
             self.config.alpha = 1.0
 
-        dist1, dist2 = self.criterion(coarse, gt_downsampled)
-        loss_coarse = (torch.mean(dist1)) + (torch.mean(dist2))
+        dist1, dist2 = self.criterion(coarse, gt_points)
+        loss_coarse = (torch.mean(torch.sqrt(dist1))) + (torch.mean(torch.sqrt(dist2)))
 
         dist1, dist2 = self.criterion(fine, gt_points)
         loss_fine = (torch.mean(torch.sqrt(dist1))) + (torch.mean(torch.sqrt(dist2)))
@@ -99,6 +101,8 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             self.current_epoch = checkpoint['epoch']
             self.current_iteration = checkpoint['iteration']
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
             self.logger.info("Checkpoint loaded successfully from '{}' at (epoch {}) at (iteration {})\n"
                              .format(self.config.checkpoint_dir, checkpoint['epoch'], checkpoint['iteration']))
@@ -110,6 +114,8 @@ class PointCompletionNetworkAgent(BaseAgent):
         state = {
             'epoch': self.current_epoch,
             'iteration': self.current_iteration,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
         }
         torch.save(state, self.config.checkpoint_dir + file_name)
 
@@ -130,14 +136,14 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.current_epoch = epoch
             self.scheduler.step()
             self.train_one_epoch()
-            # TODO: self.validate_one_epoch()
+            self.validate()
             self.save_checkpoint()
 
     def train_one_epoch(self):
         # Initialize tqdm batch
         tqdm_batch = tqdm(self.train_dataloader.loader,
                           total=self.train_dataloader.num_iterations,
-                          desc="epoch-{}-".format(self.current_epoch))
+                          desc="Epoch -{}-".format(self.current_epoch))
 
         model_loss_epoch = AverageMeter()
         loss_coarse_epoch = AverageMeter()
@@ -173,22 +179,49 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             # Visualize
             if self.config.visualize and curr_it % 10 == 0:
-                gt_points = gt_points[:, :coarse.shape[1], :]
                 plot_completion_results(self.vis,
                                         input_points.contiguous()[0].data.cpu(),
                                         coarse.contiguous()[0].data.cpu(),
                                         fine.contiguous()[0].data.cpu(),
                                         gt_points[0].data.cpu()
                                         )
+            
+            break # TODO: Remove
 
         tqdm_batch.close()
 
         self.logger.info("Training at epoch-{:d} | Network loss: {:.3f}"
                          .format(self.current_epoch, model_loss_epoch.val))
-        self.summary_writer.add_scalar("epoch/loss", model_loss_epoch.val, self.current_epoch)
+        self.summary_writer.add_scalar("epoch-training/loss", model_loss_epoch.val, self.current_epoch)
 
     def validate(self):
-        pass
+        self.model.eval()
+
+        tqdm_batch = tqdm(self.validate_dataloader.loader,
+                          total=self.validate_dataloader.num_iterations,
+                          desc="Validation at -{}-".format(self.current_epoch))
+
+        model_loss_epoch = AverageMeter()
+
+        with torch.no_grad():
+            for curr_it, x in enumerate(tqdm_batch):
+                ids, input_points, gt_points = x
+                
+                if self.cuda:
+                    input_points = input_points.cuda(non_blocking=self.config.async_loading)
+                    gt_points = gt_points.cuda(non_blocking=self.config.async_loading)
+
+                coarse, fine = self.model(input_points)
+                loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
+
+                model_loss_epoch.update(loss.item())
+        
+        self.logger.info("Validation at epoch-{:d} | Network loss: {:.3f}"
+                         .format(self.current_epoch, model_loss_epoch.val))
+        self.summary_writer.add_scalar("epoch-validation/loss", model_loss_epoch.val, self.current_epoch)
+        
+        tqdm_batch.close()
+            
 
     def finalize(self):
         self.logger.info("Agent has finished running - wait to finalize...")
