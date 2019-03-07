@@ -4,7 +4,7 @@ from tqdm import tqdm
 import visdom
 
 from agents.base import BaseAgent
-from graphs.losses.dist_chamfer import ChamferDist
+from graphs.losses.chamfer_loss import ChamferDistance
 from graphs.models.pcn import PCN
 from datasets.shapenet_point_cloud import ShapeNetPointCloudDataLoader
 from utils.metrics import AverageMeter
@@ -32,7 +32,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.97)
 
         # Define criterion
-        self.criterion = ChamferDist()
+        self.criterion = ChamferDistance()
 
         # Initialize counter
         self.current_epoch = 0
@@ -185,8 +185,6 @@ class PointCompletionNetworkAgent(BaseAgent):
                                         fine.contiguous()[0].data.cpu(),
                                         gt_points[0].data.cpu()
                                         )
-            
-            break # TODO: Remove
 
         tqdm_batch.close()
 

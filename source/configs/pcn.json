@@ -9,7 +9,7 @@
   "seed": 12345,
 
   "max_epoch": 200,
-  "batch_size": 32,
+  "batch_size": 6,
 
   "num_input_points": 1024,
   "num_gt_points": 16384,

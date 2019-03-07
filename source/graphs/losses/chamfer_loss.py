@@ -45,9 +45,9 @@ class ChamferFunction(Function):
         chamfer.backward(xyz1, xyz2, gradxyz1, gradxyz2, graddist1, graddist2, idx1, idx2)
         return gradxyz1, gradxyz2
 
-class ChamferDist(nn.Module):
+class ChamferDistance(nn.Module):
     def __init__(self):
-        super(ChamferDist, self).__init__()
+        super(ChamferDistance, self).__init__()
 
     def forward(self, input1, input2):
         return ChamferFunction.apply(input1, input2)
