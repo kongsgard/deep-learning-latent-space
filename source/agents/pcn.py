@@ -84,10 +84,10 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.config.alpha = 1.0
 
         dist1, dist2 = self.criterion(coarse, gt_points)
-        loss_coarse = (torch.mean(torch.sqrt(dist1))) + (torch.mean(torch.sqrt(dist2)))
+        loss_coarse = (torch.mean(dist1)) + (torch.mean(dist2))
 
         dist1, dist2 = self.criterion(fine, gt_points)
-        loss_fine = (torch.mean(torch.sqrt(dist1))) + (torch.mean(torch.sqrt(dist2)))
+        loss_fine = (torch.mean(dist1)) + (torch.mean(dist2))
 
         loss = loss_coarse + self.config.alpha * loss_fine
 
@@ -178,7 +178,7 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.summary_writer.add_scalar("iteration/loss", loss.item(), self.current_iteration)
 
             # Visualize
-            if self.config.visualize and curr_it % 10 == 0:
+            if self.config.visualize and curr_it % 200 == 0:
                 plot_completion_results(self.vis,
                                         input_points.contiguous()[0].data.cpu(),
                                         coarse.contiguous()[0].data.cpu(),
