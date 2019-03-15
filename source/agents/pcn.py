@@ -16,28 +16,6 @@ class PointCompletionNetworkAgent(BaseAgent):
     def __init__(self, config):
         super().__init__(config)
 
-        # Define model
-        self.model = PCN(self.config)
-
-        # Define dataloader
-        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
-                                                             dataset_mode='train')
-        self.validate_dataloader = ShapeNetPointCloudDataLoader(self.config,
-                                                                dataset_mode='valid')
-
-        # Define optimizer and scheduler
-        self.optimizer = torch.optim.Adam(self.model.parameters(),
-                                          lr=self.config.learning_rate,
-                                          weight_decay=self.config.weight_decay)
-        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.97)
-
-        # Define criterion
-        self.criterion = ChamferDistance()
-
-        # Initialize counter
-        self.current_epoch = 0
-        self.current_iteration = 0
-
         # Set cuda flag
         self.is_cuda = torch.cuda.is_available()
         if self.is_cuda and not self.config.cuda:
@@ -56,9 +34,29 @@ class PointCompletionNetworkAgent(BaseAgent):
             torch.manual_seed(self.config.seed)
             self.logger.info("Program will run on ***CPU***")
 
-        # Send the models and loss to the device used
+        # Define model
+        self.model = PCN(self.config)
         self.model = self.model.to(self.device)
+
+        # Define dataloader
+        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
+                                                             dataset_mode='train')
+        self.validate_dataloader = ShapeNetPointCloudDataLoader(self.config,
+                                                                dataset_mode='valid')
+
+        # Define optimizer and scheduler
+        self.optimizer = torch.optim.Adam(self.model.parameters(),
+                                          lr=self.config.learning_rate,
+                                          weight_decay=self.config.weight_decay)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.97)
+
+        # Define criterion
+        self.criterion = ChamferDistance()
         self.criterion = self.criterion.to(self.device)
+
+        # Initialize counter
+        self.current_epoch = 0
+        self.current_iteration = 0
 
         # Load model from the latest checkpoint.
         # If none can be found, start from scratch.
@@ -76,11 +74,11 @@ class PointCompletionNetworkAgent(BaseAgent):
 
         #gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
 
-        if self.current_epoch >= 10:
+        if self.current_epoch >= 70:
             self.config.alpha = 0.1
-        elif self.current_epoch >= 20:
+        elif self.current_epoch >= 140:
             self.config.alpha = 0.5
-        elif self.current_epoch >= 50:
+        elif self.current_epoch >= 350:
             self.config.alpha = 1.0
 
         dist1, dist2 = self.criterion(coarse, gt_points)
