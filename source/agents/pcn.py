@@ -168,12 +168,14 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             # Update and log the current loss
             model_loss_epoch.update(loss.item())
-            #loss_coarse_epoch.update(loss_coarse.item())
-            #loss_fine_epoch.update(loss_fine.item())
+            loss_coarse_epoch.update(loss_coarse.item())
+            loss_fine_epoch.update(loss_fine.item())
 
             self.current_iteration += 1
 
             self.summary_writer.add_scalar("iteration/loss", loss.item(), self.current_iteration)
+            self.summary_writer.add_scalar("iteration/loss_coarse", loss_coarse.item(), self.current_iteration)
+            self.summary_writer.add_scalar("iteration/loss_fine", loss_fine.item(), self.current_iteration)
 
             # Visualize
             if self.config.visualize and curr_it % 200 == 0:
@@ -189,6 +191,8 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.logger.info("Training at epoch-{:d} | Network loss: {:.3f}"
                          .format(self.current_epoch, model_loss_epoch.val))
         self.summary_writer.add_scalar("epoch-training/loss", model_loss_epoch.val, self.current_epoch)
+        self.summary_writer.add_scalar("epoch-training/loss", loss_coarse_epoch.val, self.current_epoch)
+        self.summary_writer.add_scalar("epoch-training/loss", loss_fine_epoch.val, self.current_epoch)
 
     def validate(self):
         self.model.eval()
