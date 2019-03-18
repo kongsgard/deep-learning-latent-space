@@ -58,6 +58,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         # Initialize counter
         self.current_epoch = 0
         self.current_iteration = 0
+        self.best_valid_mean_loss = 1.0 # The best loss will be far less than 1.0
 
         # Load model from the latest checkpoint.
         # If none can be found, start from scratch.
@@ -135,8 +136,13 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.current_epoch = epoch
             self.scheduler.step()
             self.train_one_epoch()
-            self.validate()
-            self.save_checkpoint()
+            best_valid_mean_loss = self.validate()
+
+            is_best = best_valid_mean_loss < self.best_valid_mean_loss
+            if is_best:
+                self.best_valid_mean_loss = best_valid_mean_loss
+
+            self.save_checkpoint(is_best=is_best)
 
     def train_one_epoch(self):
         # Initialize tqdm batch
@@ -223,6 +229,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.summary_writer.add_scalar("epoch-validation/loss", model_loss_epoch.val, self.current_epoch)
         
         tqdm_batch.close()
+        return model_loss_epoch.val
             
 
     def finalize(self):
