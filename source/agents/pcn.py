@@ -2,6 +2,7 @@ from tensorboardX import SummaryWriter
 import torch
 from tqdm import tqdm
 import visdom
+import shutil
 
 from agents.base import BaseAgent
 from graphs.losses.chamfer_loss import ChamferDistance
@@ -15,28 +16,6 @@ from utils.pcd.pcd_utils import plot_completion_results
 class PointCompletionNetworkAgent(BaseAgent):
     def __init__(self, config):
         super().__init__(config)
-
-        # Define model
-        self.model = PCN(self.config)
-
-        # Define dataloader
-        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
-                                                             dataset_mode='train')
-        self.validate_dataloader = ShapeNetPointCloudDataLoader(self.config,
-                                                                dataset_mode='valid')
-
-        # Define optimizer and scheduler
-        self.optimizer = torch.optim.Adam(self.model.parameters(),
-                                          lr=self.config.learning_rate,
-                                          weight_decay=self.config.weight_decay)
-        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.97)
-
-        # Define criterion
-        self.criterion = ChamferDistance()
-
-        # Initialize counter
-        self.current_epoch = 0
-        self.current_iteration = 0
 
         # Set cuda flag
         self.is_cuda = torch.cuda.is_available()
@@ -56,9 +35,31 @@ class PointCompletionNetworkAgent(BaseAgent):
             torch.manual_seed(self.config.seed)
             self.logger.info("Program will run on ***CPU***")
 
-        # Send the models and loss to the device used
+        # Define model
+        self.model = PCN(self.config)
         self.model = self.model.to(self.device)
+
+        # Define dataloader
+        self.train_dataloader = ShapeNetPointCloudDataLoader(self.config, 
+                                                             dataset_mode='train')
+        self.validate_dataloader = ShapeNetPointCloudDataLoader(self.config,
+                                                                dataset_mode='valid')
+
+        # Define optimizer and scheduler
+        self.optimizer = torch.optim.Adam(self.model.parameters(),
+                                          lr=self.config.learning_rate,
+                                          eps=1e-04,
+                                          weight_decay=self.config.weight_decay)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.97)
+
+        # Define criterion
+        self.criterion = ChamferDistance()
         self.criterion = self.criterion.to(self.device)
+
+        # Initialize counter
+        self.current_epoch = 0
+        self.current_iteration = 0
+        self.best_valid_mean_loss = 1.0 # The best loss will be far less than 1.0
 
         # Load model from the latest checkpoint.
         # If none can be found, start from scratch.
@@ -74,13 +75,13 @@ class PointCompletionNetworkAgent(BaseAgent):
     def update_loss(self, coarse, fine, gt_points):
         # TODO: Add summaries
 
-        #gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
+        gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
 
-        if self.current_epoch >= 10:
+        if self.current_epoch >= 70:
             self.config.alpha = 0.1
-        elif self.current_epoch >= 20:
+        elif self.current_epoch >= 140:
             self.config.alpha = 0.5
-        elif self.current_epoch >= 50:
+        elif self.current_epoch >= 350:
             self.config.alpha = 1.0
 
         dist1, dist2 = self.criterion(coarse, gt_points)
@@ -136,8 +137,13 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.current_epoch = epoch
             self.scheduler.step()
             self.train_one_epoch()
-            self.validate()
-            self.save_checkpoint()
+            best_valid_mean_loss = self.validate()
+
+            is_best = best_valid_mean_loss < self.best_valid_mean_loss
+            if is_best:
+                self.best_valid_mean_loss = best_valid_mean_loss
+
+            self.save_checkpoint(is_best=is_best)
 
     def train_one_epoch(self):
         # Initialize tqdm batch
@@ -164,18 +170,21 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             coarse, fine = self.model(input_points)
 
-            loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
-            loss.backward()
-            self.optimizer.step()
+            with torch.autograd.detect_anomaly():
+                loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
+                loss.backward()
+                self.optimizer.step()
 
             # Update and log the current loss
             model_loss_epoch.update(loss.item())
-            #loss_coarse_epoch.update(loss_coarse.item())
-            #loss_fine_epoch.update(loss_fine.item())
+            loss_coarse_epoch.update(loss_coarse.item())
+            loss_fine_epoch.update(loss_fine.item())
 
             self.current_iteration += 1
 
             self.summary_writer.add_scalar("iteration/loss", loss.item(), self.current_iteration)
+            self.summary_writer.add_scalar("iteration/loss_coarse", loss_coarse.item(), self.current_iteration)
+            self.summary_writer.add_scalar("iteration/loss_fine", loss_fine.item(), self.current_iteration)
 
             # Visualize
             if self.config.visualize and curr_it % 200 == 0:
@@ -191,6 +200,8 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.logger.info("Training at epoch-{:d} | Network loss: {:.3f}"
                          .format(self.current_epoch, model_loss_epoch.val))
         self.summary_writer.add_scalar("epoch-training/loss", model_loss_epoch.val, self.current_epoch)
+        self.summary_writer.add_scalar("epoch-training/loss_coarse", loss_coarse_epoch.val, self.current_epoch)
+        self.summary_writer.add_scalar("epoch-training/loss_fine", loss_fine_epoch.val, self.current_epoch)
 
     def validate(self):
         self.model.eval()
@@ -219,6 +230,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         self.summary_writer.add_scalar("epoch-validation/loss", model_loss_epoch.val, self.current_epoch)
         
         tqdm_batch.close()
+        return model_loss_epoch.val
             
 
     def finalize(self):
