@@ -1,5 +1,5 @@
 {
-  "exp_name": "pcn_exp_0",
+  "exp_name": "pcn_exp_5",
   "agent": "PointCompletionNetworkAgent",
   "mode": "train",
   "visualize": true,
@@ -8,7 +8,7 @@
   "gpu_device": 0,
   "seed": 12345,
 
-  "max_epoch": 200,
+  "max_epoch": 500,
   "batch_size": 32,
 
   "num_input_points": 1024,

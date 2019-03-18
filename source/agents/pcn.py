@@ -47,6 +47,7 @@ class PointCompletionNetworkAgent(BaseAgent):
         # Define optimizer and scheduler
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=self.config.learning_rate,
+                                          eps=1e-04,
                                           weight_decay=self.config.weight_decay)
         self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, 0.97)
 
@@ -72,7 +73,7 @@ class PointCompletionNetworkAgent(BaseAgent):
     def update_loss(self, coarse, fine, gt_points):
         # TODO: Add summaries
 
-        #gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
+        gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
 
         if self.current_epoch >= 70:
             self.config.alpha = 0.1
@@ -162,9 +163,10 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             coarse, fine = self.model(input_points)
 
-            loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
-            loss.backward()
-            self.optimizer.step()
+            with torch.autograd.detect_anomaly():
+                loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
+                loss.backward()
+                self.optimizer.step()
 
             # Update and log the current loss
             model_loss_epoch.update(loss.item())
