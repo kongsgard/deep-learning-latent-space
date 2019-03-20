@@ -1,0 +1,39 @@
+{
+  "exp_name": "pointnet_classification_exp_0",
+  "agent": "Pointnet2ClsMSG",
+  "mode": "train",
+  "visualize": true,
+
+  "cuda": true,
+  "gpu_device": 0,
+  "seed": 12345,
+
+  "num_points": 4096,
+
+  "max_epoch": 200,
+  "batch_size": 10,
+
+  "learning_rate": 0.01,
+  "lr_decay": 0.7,
+  "decay_step": 2e5,
+  "weight_decay": 0.00001,
+  "batch_norm_momentum": 0.5,
+  "bnm_decay": 0.5,
+
+  "checkpoint_file": "checkpoint.pth.tar",
+
+  "data_loader": "ModelNet40Cls",
+  "data_loader_workers": 2,
+  "pin_memory": true,
+  "async_loading": true,
+
+  "data_base_directory": "./data/",
+  "data_folder": "./data/modelnet40_ply_hdf5_2048/",
+
+  "x_train": "",
+  "y_train": "",
+  "x_valid": "",
+  "y_valid": "",
+  "x_test": "",
+  "y_test": ""
+}

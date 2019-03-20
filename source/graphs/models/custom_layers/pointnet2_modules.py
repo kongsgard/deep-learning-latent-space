@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import etw_pytorch_utils as pt_utils
 
-from pointnet2.utils import pointnet2_utils
+from utils import pointnet2_utils
 
 if False:
     # Workaround for type hints without depending on the `typing` module
