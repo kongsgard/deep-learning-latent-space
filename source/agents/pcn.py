@@ -73,8 +73,6 @@ class PointCompletionNetworkAgent(BaseAgent):
                                             comment='PCN')
 
     def update_loss(self, coarse, fine, gt_points):
-        # TODO: Add summaries
-
         gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
 
         if self.current_epoch >= 70:
@@ -146,6 +144,8 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.save_checkpoint(is_best=is_best)
 
     def train_one_epoch(self):
+        self.model.train()
+
         # Initialize tqdm batch
         tqdm_batch = tqdm(self.train_dataloader.loader,
                           total=self.train_dataloader.num_iterations,
@@ -172,8 +172,11 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             with torch.autograd.detect_anomaly():
                 loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
-                loss.backward()
+                loss_coarse.backward()
                 self.optimizer.step()
+                if self.current_epoch > 0
+                    loss_fine.backward()
+                
 
             # Update and log the current loss
             model_loss_epoch.update(loss.item())

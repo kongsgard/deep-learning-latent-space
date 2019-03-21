@@ -8,7 +8,7 @@
   "gpu_device": 0,
   "seed": 12345,
 
-  "max_epoch": 500,
+  "max_epoch": 1000,
   "batch_size": 32,
 
   "num_input_points": 1024,
@@ -19,6 +19,7 @@
   "grid_scale": 0.05,
 
   "learning_rate": 0.0001,
+  "learning_rate_fine": 1e-5,
   "lr_decay": 0.999,
   "weight_decay": 0.00001,
   "alpha": 0.01,
