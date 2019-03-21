@@ -73,8 +73,6 @@ class PointCompletionNetworkAgent(BaseAgent):
                                             comment='PCN')
 
     def update_loss(self, coarse, fine, gt_points):
-        # TODO: Add summaries
-
         gt_downsampled = gt_points[:, :coarse.shape[1], :] # Possibly not necessary if only Chamfer Distance is used
 
         if self.current_epoch >= 70:
@@ -146,6 +144,8 @@ class PointCompletionNetworkAgent(BaseAgent):
             self.save_checkpoint(is_best=is_best)
 
     def train_one_epoch(self):
+        self.model.train()
+
         # Initialize tqdm batch
         tqdm_batch = tqdm(self.train_dataloader.loader,
                           total=self.train_dataloader.num_iterations,

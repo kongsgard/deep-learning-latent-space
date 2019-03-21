@@ -45,6 +45,14 @@ class PCN(nn.Module):
             nn.Conv1d(512, 3, kernel_size=1),
         )
 
+        self.grid_features = torch.meshgrid([
+            torch.linspace(-self.config.grid_scale, self.config.grid_scale, self.config.grid_size),
+            torch.linspace(-self.config.grid_scale, self.config.grid_scale, self.config.grid_size)
+        ])
+        self.grid_features = torch.reshape(torch.stack(self.grid_features, dim=2), (-1, 2)).view(1, 16, 2).flip(2)
+        self.grid_features = self.grid_features.to(self.device)
+        
+
     def encode(self, x):
         # The Conv1d operator requires an input with shape (N, C_in, L_in) which necessitates a transpose of the input_points
         # Perform the inverse transpose of the network output
@@ -63,14 +71,7 @@ class PCN(nn.Module):
         coarse = self.decoder_coarse_layer(x)
         coarse = coarse.view(-1, self.config.num_coarse, 3) # [32, 1024, 3]
 
-        grid_features = torch.meshgrid([
-            torch.linspace(-self.config.grid_scale, self.config.grid_scale, self.config.grid_size),
-            torch.linspace(-self.config.grid_scale, self.config.grid_scale, self.config.grid_size)
-        ])
-        grid_features = torch.reshape(torch.stack(grid_features, dim=2), (-1, 2)).view(1, 16, 2).flip(2)
-
-        grid_features = grid_features.repeat(x.shape[0], self.config.num_coarse, 1) # [32, 16384, 2]
-        grid_features = grid_features.to(self.device)
+        grid_features = self.grid_features.repeat(x.shape[0], self.config.num_coarse, 1) # [32, 16384, 2]
 
         point_features = coarse.view(-1, coarse.shape[1], 1, 3).detach()
         point_features = point_features.repeat(1, 1, self.config.grid_size ** 2, 1)
@@ -81,7 +82,7 @@ class PCN(nn.Module):
 
         features = torch.cat((grid_features, point_features, global_features), 2) # [32, 16384, 1029]
         
-        center = coarse.view(-1, coarse.shape[1], 1, 3)
+        center = coarse.view(-1, coarse.shape[1], 1, 3).detach()
         center = center.repeat(1, 1, self.config.grid_size ** 2, 1)
         center = center.view(-1, self.num_fine, 3) # [32, 16384, 3]
         
