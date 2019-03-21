@@ -172,11 +172,8 @@ class PointCompletionNetworkAgent(BaseAgent):
 
             with torch.autograd.detect_anomaly():
                 loss, loss_coarse, loss_fine = self.update_loss(coarse, fine, gt_points)
-                loss_coarse.backward()
+                loss.backward()
                 self.optimizer.step()
-                if self.current_epoch > 0
-                    loss_fine.backward()
-                
 
             # Update and log the current loss
             model_loss_epoch.update(loss.item())
